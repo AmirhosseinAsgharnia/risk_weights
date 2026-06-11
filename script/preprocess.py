@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from waymo_open_dataset.protos import scenario_pb2
 
-from src.dataloader import _iter_tfrecord, parse_scenario
+from src.dataloader.dataloader import _iter_tfrecord, parse_scenario
 
 DATA_DIR = "data/raw/waymo_motion/scenario/train"
 OUT_DIR = "data/processd/train"
