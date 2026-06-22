@@ -10,7 +10,7 @@ Lane k centre    : y_abs = (n_lanes - k - 0.5) * lane_width.
 World XY conversion:  road_geom.to_world(s, y_abs)
   x = x_ref(s) + y_abs * sin(θ(s))
   y = y_ref(s) − y_abs * cos(θ(s))
-where θ(s) = k0·s + k1·s²/2 is the road heading.
+where θ(s) = (A/ω)·(1 − cos(ω·s)) is the road heading.
 """
 
 import numpy as np
@@ -36,10 +36,10 @@ _WINDOW_LAT  = 4.0     # m padding outside road edges
 class RoadGeometry:
     """Pre-computes the world-XY path of the left road boundary for fast lookup."""
 
-    def __init__(self, k0: float, k1: float, s_max: float = 400.0, ds: float = 0.5):
-        self.k0, self.k1 = k0, k1
+    def __init__(self, kappa_A: float, kappa_omega: float, s_max: float = 400.0, ds: float = 0.5):
+        self.kappa_A, self.kappa_omega = kappa_A, kappa_omega
         s       = np.arange(0.0, s_max + ds, ds)
-        theta   = theta_road(s, k0, k1)
+        theta   = theta_road(s, kappa_A, kappa_omega)
         x_ref   = np.concatenate([[0.0], cumulative_trapezoid(np.cos(theta), s)])
         y_ref   = np.concatenate([[0.0], cumulative_trapezoid(np.sin(theta), s)])
         self._s     = s

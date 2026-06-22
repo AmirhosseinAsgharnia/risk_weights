@@ -1,8 +1,8 @@
 """
-Environment demo — a=delta=0 for all vehicles.
+Controller demo — MPC drives the ego vehicle.
 
-Edit the SandwichScenario block to explore different configurations.
-Run:  python env_demo.py
+Road and environment parameters are set here.
+Run:  python controller_demo.py
 """
 
 import numpy as np
@@ -11,6 +11,16 @@ import environment.env_scenario as env_scenario
 import risks.env_risk as env_risk
 import visualize.env_visualize as env_visualize
 from environment.scenarios import SandwichScenario
+from controller.mpc import MPC
+
+# ── Risk weights ───────────────────────────────────────────────────────────────
+
+risk_weights = {
+    'c2c':  0.5,
+    'slip': 0.0,
+    'roll': 0.0,
+    'ld':   0.5,
+}
 
 # ── Scenario ──────────────────────────────────────────────────────────────────
 
@@ -25,20 +35,19 @@ scenario = SandwichScenario(
 
     ego_ey   = 0.0,           # within-lane SAE offset (m), 0 = lane centre
     ego_epsi = 0.0,           # initial heading error (rad)
-    v0       = 25.0,          # m/s
+    v0       = 20.0,          # m/s
 
-    # Up to 10 vehicles; omitted slots are automatically invalid
+    # Sandwich: vehicle ahead and behind in same lane, one on the side
     vehicles = [
-        {'x_rel':  15.0, 'v_x': 20.0, 'lane': 1},   # ahead, same lane
-        {'x_rel':  -8.0, 'v_x': 20.0, 'lane': 1},   # behind, same lane
-        {'x_rel':   0.0, 'v_x': 28.0, 'lane': 0},   # side, rightmost lane
+        {'x_rel':  15.0, 'v_x': 18.0, 'lane': 1},   # ahead, same lane (slow)
+        {'x_rel':  -8.0, 'v_x': 20.0, 'lane': 1},   # behind, same lane (fast)
+        {'x_rel':   0.0, 'v_x': 28.0, 'lane': 2},   # side, rightmost lane
     ],
 
     dt    = 0.05,
     t_end = 8.0,
 )
 
-# Show the env vector for debugging
 print("Env vector:", scenario.to_vector())
 print(scenario)
 
@@ -46,7 +55,9 @@ print(scenario)
 # ── Simulation ────────────────────────────────────────────────────────────────
 
 def run(sc: SandwichScenario, quiet: bool = False):
-    ego_state = sc.ego_init_state()          # [e_y, psi, e_psi, psi_dot, v_x, v_y]
+    mpc = MPC(risk_weights=risk_weights, v_ref=20.0, w_v=0.01)
+
+    ego_state = sc.ego_init_state()
     ego_lane  = sc.ego_lane
     s_ego     = 0.0
 
@@ -60,26 +71,31 @@ def run(sc: SandwichScenario, quiet: bool = False):
     for step_idx in range(n_steps):
         t_now = step_idx * sc.dt
 
-        # ── Risk assessment ───────────────────────────────────────────────────
-        ego_fut, sur_fut = env_risk.predict_zero_control(
-            ego_state, s_ego, ego_lane, vehicles, sc
+        # ── MPC: compute optimal control ──────────────────────────────────────
+        a_opt, delta_opt = mpc.solve(ego_state, s_ego, ego_lane, vehicles, sc)
+
+        # ── Risk assessment at chosen control ─────────────────────────────────
+        ego_fut, sur_fut = mpc._predict(
+            ego_state, s_ego, ego_lane, vehicles, sc, a_opt, delta_opt
         )
         J, ps, pr, pc, pl = env_risk.total_cost(
-            ego_fut, sur_fut, 0.0, 0.0, sc
+            ego_fut, sur_fut, a_opt, delta_opt, sc, risk_weights
         )
 
         if not quiet:
             e_y, psi, e_psi, *_ = ego_state
             print(
                 f"t={t_now:5.2f}s  lane={ego_lane}  s={s_ego:.1f}  "
-                f"e_y={e_y:+.3f}  ψ={np.degrees(psi):.2f}°  "
-                f"eψ={np.degrees(e_psi):.2f}°  v_x={ego_state[4]:.2f}  "
-                f"J={J:.4f}  Pc2c={pc:.3f}  Pld={pl:.3f}"
+                f"e_y={e_y:+.3f}  eψ={np.degrees(e_psi):.2f}°  "
+                f"v_x={ego_state[4]:.2f}  "
+                f"a={a_opt:+.2f}  δ={np.degrees(delta_opt):+.2f}°  "
+                f"J={J:.4f}  Pc2c={pc:.3f}  Pld={pl:.3f} Pslip={ps:.3f}  Proll={pr:.3f}"
             )
 
         history.append({
             't': t_now, 'ego_state': ego_state.copy(),
             'ego_lane': ego_lane, 's_ego': s_ego,
+            'a': a_opt, 'delta': delta_opt,
             'J': J, 'P_slip': ps, 'P_roll': pr, 'P_c2c': pc, 'P_ld': pl,
         })
 
@@ -99,7 +115,7 @@ def run(sc: SandwichScenario, quiet: bool = False):
 
         # ── Advance dynamics ──────────────────────────────────────────────────
         ego_state, s_ego, ego_lane = env_dynamics.step(
-            ego_state, 0.0, 0.0, s_ego, ego_lane,
+            ego_state, a_opt, delta_opt, s_ego, ego_lane,
             sc.kappa_A, sc.kappa_omega, sc.n_lanes, sc.lane_width, sc.dt,
         )
         vehicles = env_scenario.step_vehicles(vehicles, sc.dt)
@@ -118,4 +134,4 @@ def run(sc: SandwichScenario, quiet: bool = False):
 if __name__ == '__main__':
     history, frames = run(scenario)
     print(f"\n{len(history)} steps simulated.")
-    env_visualize.make_gif(frames, path='env_demo.gif', fps=20)
+    env_visualize.make_gif(frames, path='controller_demo.gif', fps=20)

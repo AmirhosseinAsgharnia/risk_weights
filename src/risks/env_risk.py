@@ -50,7 +50,7 @@ def predict_zero_control(ego_state, s_ego: float, ego_lane: int,
     state    = ego_state.copy()
     s        = float(s_ego)
     lane     = ego_lane
-    k0, k1   = scenario.k0, scenario.k1
+    kappa_A, kappa_omega = scenario.kappa_A, scenario.kappa_omega
     n_lanes  = scenario.n_lanes
     lw       = scenario.lane_width
 
@@ -62,7 +62,7 @@ def predict_zero_control(ego_state, s_ego: float, ego_lane: int,
 
     for k in range(N):
         state, s, lane = env_dynamics.step(
-            state, 0.0, 0.0, s, lane, k0, k1, n_lanes, lw, dt_pred
+            state, 0.0, 0.0, s, lane, kappa_A, kappa_omega, n_lanes, lw, dt_pred
         )
         e_y_arr[k]   = state[0]
         y_abs_arr[k] = env_dynamics.lane_center_abs(lane, n_lanes, lw) + state[0]

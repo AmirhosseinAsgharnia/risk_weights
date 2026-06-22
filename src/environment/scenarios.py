@@ -16,8 +16,8 @@ Environment vector layout for SandwichScenario (length 49):
   [1]     n_lanes    in {1, 2, 3}
   [2]     ego_lane   in {0, …, n_lanes-1}  (0 = rightmost)
   [3]     lane_width (m)
-  [4]     k0         constant curvature (rad/m)
-  [5]     k1         linear curvature coefficient (rad/m²)
+  [4]     kappa_A     curvature amplitude (rad/m)
+  [5]     kappa_omega curvature angular frequency (rad/m); λ = 2π/ω
   [6]     e_y_ego    initial within-lane SAE J670 lateral offset (m)
   [7]     e_psi_ego  initial heading error (rad)
   [8]     v_x_ego    initial longitudinal speed (m/s)
@@ -29,7 +29,7 @@ Environment vector layout for SandwichScenario (length 49):
 
 Lane convention:  0 = rightmost,  n_lanes-1 = leftmost.
 e_y convention:   SAE J670 — zero at lane centre, positive rightward.
-Curvature:        κ(s) = k0 + k1·s  (positive = left turn).
+Curvature:        κ(s) = A·sin(ω·s)  (positive = left turn).
 Frenet reference: left road boundary.
 """
 
@@ -48,8 +48,8 @@ class SandwichScenario:
         n_lanes    : int   = 3,
         ego_lane   : int   = 1,
         lane_width : float = 3.7,
-        k0         : float = 0.0,
-        k1         : float = 0.0,
+        kappa_A     : float = 0.0,
+        kappa_omega : float = 0.0,
         ego_ey     : float = 0.0,
         ego_epsi   : float = 0.0,
         v0         : float = 25.0,
@@ -65,8 +65,8 @@ class SandwichScenario:
         self.n_lanes    = n_lanes
         self.ego_lane   = ego_lane
         self.lane_width = lane_width
-        self.k0         = k0
-        self.k1         = k1
+        self.kappa_A     = kappa_A
+        self.kappa_omega = kappa_omega
         self.ego_ey     = ego_ey
         self.ego_epsi   = ego_epsi
         self.v0         = v0
@@ -117,8 +117,8 @@ class SandwichScenario:
         vec[1] = self.n_lanes
         vec[2] = self.ego_lane
         vec[3] = self.lane_width
-        vec[4] = self.k0
-        vec[5] = self.k1
+        vec[4] = self.kappa_A
+        vec[5] = self.kappa_omega
         vec[6] = self.ego_ey
         vec[7] = self.ego_epsi
         vec[8] = self.v0
@@ -148,8 +148,8 @@ class SandwichScenario:
             n_lanes    = int(round(vec[1])),
             ego_lane   = int(round(vec[2])),
             lane_width = float(vec[3]),
-            k0         = float(vec[4]),
-            k1         = float(vec[5]),
+            kappa_A     = float(vec[4]),
+            kappa_omega = float(vec[5]),
             ego_ey     = float(vec[6]),
             ego_epsi   = float(vec[7]),
             v0         = float(vec[8]),
@@ -162,6 +162,6 @@ class SandwichScenario:
         n_active = sum(1 for v in self.vehicles if v['valid'])
         return (
             f"SandwichScenario(n_lanes={self.n_lanes}, ego_lane={self.ego_lane}, "
-            f"lw={self.lane_width}, k0={self.k0:.4f}, k1={self.k1:.5f}, "
+            f"lw={self.lane_width}, A={self.kappa_A:.4f}, ω={self.kappa_omega:.4f}, "
             f"v0={self.v0}, vehicles={n_active}/{N_VEH_MAX})"
         )
