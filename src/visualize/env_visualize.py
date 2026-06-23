@@ -194,6 +194,127 @@ def _set_view(ax, cx, cy, road_angle, window_s, road_width, pad):
     ax.set_ylim(corners[:, 1].min() + cy, corners[:, 1].max() + cy)
 
 
+# ── Mode-2 frame: full road history view ─────────────────────────────────────
+
+def _draw_frame_history(
+    history: list,    # all history dicts accumulated so far (current step included)
+    ego_state,
+    ego_lane: int,
+    s_ego: float,
+    vehicles: list,
+    ego_fut: dict,
+    sur_fut: list,
+    risks: dict,
+    road_geom: RoadGeometry,
+    scenario: SandwichScenario,
+    step_n: int,
+    epoch_n: int = 0,
+):
+    """Full-road history view: shows the entire road traveled + ego trail."""
+    fig, (ax_road, ax_risk) = plt.subplots(
+        1, 2, figsize=(14, 6),
+        gridspec_kw={'width_ratios': [3, 1]},
+    )
+
+    n_lanes = scenario.n_lanes
+    lw      = scenario.lane_width
+
+    s_start = history[0]['s_ego'] if history else s_ego
+    s_lo    = max(s_start - 5.0, 0.0)
+    s_hi    = s_ego + 20.0
+
+    s_road  = np.linspace(s_lo, s_hi, max(400, int((s_hi - s_lo) * 5)))
+
+    ax_road.set_facecolor('#555555')
+    ax_road.set_xlabel('World x (m)')
+    ax_road.set_ylabel('World y (m)')
+    ax_road.set_aspect('equal')
+
+    # ── Road boundaries ───────────────────────────────────────────────────────
+    for k in range(n_lanes + 1):
+        y_bound = k * lw
+        xb, yb  = road_geom.to_world(s_road, np.full_like(s_road, y_bound))
+        ls      = 'solid' if k in (0, n_lanes) else 'dashed'
+        ax_road.plot(xb, yb, color='white', linewidth=1.2, linestyle=ls)
+
+    # ── Historical ego trail ──────────────────────────────────────────────────
+    if len(history) > 1:
+        s_hist    = np.array([h['s_ego'] for h in history])
+        ey_hist   = np.array([h['ego_state'][0] for h in history])
+        lane_hist = [h['ego_lane'] for h in history]
+        yabs_hist = np.array([
+            lane_center_abs(lane_hist[i], n_lanes, lw) + ey_hist[i]
+            for i in range(len(history))
+        ])
+        x_trail, y_trail = road_geom.to_world(s_hist, yabs_hist)
+        ax_road.plot(x_trail, y_trail, color='cyan', linewidth=1.5,
+                     alpha=0.7, zorder=2, label='ego history')
+
+    # ── Predicted future path ─────────────────────────────────────────────────
+    x_pred, y_pred = road_geom.to_world(ego_fut['s'], ego_fut['y_abs'])
+    ax_road.plot(x_pred, y_pred, 'b--', linewidth=1.2, zorder=3, label='ego pred.')
+
+    # ── Ego current position ──────────────────────────────────────────────────
+    e_y_ego   = ego_state[0]
+    psi_ego   = ego_state[1]
+    y_abs_ego = lane_center_abs(ego_lane, n_lanes, lw) + e_y_ego
+    x_ego, y_ego = road_geom.to_world(s_ego, y_abs_ego)
+    x_ego, y_ego = float(x_ego), float(y_ego)
+    _draw_vehicle(ax_road, x_ego, y_ego, psi_ego, 'deepskyblue', 'ego')
+
+    # ── Surrounding vehicles ──────────────────────────────────────────────────
+    for i, veh in enumerate(vehicles):
+        if not veh['valid']:
+            continue
+        xv, yv  = road_geom.to_world(veh['s'], veh['y_abs'])
+        theta_v = road_geom.heading_at(veh['s'])
+        col     = _VEH_COLORS[i % len(_VEH_COLORS)]
+        _draw_vehicle(ax_road, float(xv), float(yv), theta_v, col,
+                      f"veh-{i} L{veh['lane']}")
+
+    # ── Auto-fit axis to full road extent ─────────────────────────────────────
+    all_y_bounds = [road_geom.to_world(s_road, np.full_like(s_road, k * lw))
+                    for k in range(n_lanes + 1)]
+    all_x = np.concatenate([b[0] for b in all_y_bounds])
+    all_y = np.concatenate([b[1] for b in all_y_bounds])
+    pad   = _WINDOW_LAT
+    ax_road.set_xlim(all_x.min() - pad, all_x.max() + pad)
+    ax_road.set_ylim(all_y.min() - pad, all_y.max() + pad)
+
+    ax_road.legend(loc='upper left', fontsize=7, framealpha=0.7)
+    ax_road.set_title(
+        f'Epoch {epoch_n}  |  Step {step_n}  |  '
+        f'lane={ego_lane}  e_y={e_y_ego:+.2f}m  '
+        f'ψ={np.degrees(psi_ego):.1f}°  v_x={ego_state[4]:.1f}m/s  s={s_ego:.1f}m',
+        fontsize=8,
+    )
+
+    # ── Risk bar chart ────────────────────────────────────────────────────────
+    labels = ['P_slip', 'P_roll', 'P_c2c', 'P_ld']
+    values = [risks['P_slip'], risks['P_roll'], risks['P_c2c'], risks['P_ld']]
+    colors = ['#e74c3c', '#e67e22', '#3498db', '#2ecc71']
+
+    bars = ax_risk.bar(labels, values, color=colors, edgecolor='black', width=0.6)
+    ax_risk.set_ylim(0, 1)
+    ax_risk.set_ylabel('Risk probability')
+    ax_risk.set_title('Risk components', fontsize=9)
+    ax_risk.tick_params(axis='x', labelsize=8)
+    for bar, val in zip(bars, values):
+        ax_risk.text(
+            bar.get_x() + bar.get_width() / 2, val + 0.02,
+            f'{val:.3f}', ha='center', va='bottom', fontsize=7,
+        )
+
+    fig.tight_layout()
+    fig.canvas.draw()
+    w, h  = fig.canvas.get_width_height()
+    frame = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
+    frame = frame.reshape(h, w, 4)
+    frame = np.roll(frame, -1, axis=2)
+    plt.close(fig)
+    return frame
+
+
 # ── GIF export ────────────────────────────────────────────────────────────────
 
 def make_gif(frames, path='env_demo.gif', fps=20):

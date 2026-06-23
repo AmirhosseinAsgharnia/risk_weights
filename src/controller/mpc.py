@@ -93,18 +93,15 @@ class MPC:
 
         candidates = [
             self._prev_u.copy(),
-            np.array([0.0,   0.0]),
-            np.array([-3.0,  0.0]),
-            np.array([0.0,   delta_max]),
-            np.array([-3.0,  delta_max]),
-            np.array([0.0,   delta_min]),
+            np.array([0.0,  0.0]),
+            np.array([-3.0, 0.0]),
         ]
 
         best_val = np.inf
         u_opt    = self._prev_u.copy()
         for u_init in candidates:
             r = minimize(cost, u_init, method='SLSQP', bounds=bounds,
-                         options={'maxiter': 100, 'ftol': 1e-6})
+                         options={'maxiter': 50, 'ftol': 1e-4})
             if r.fun < best_val:
                 best_val = r.fun
                 u_opt    = r.x

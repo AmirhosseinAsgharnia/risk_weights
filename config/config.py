@@ -51,7 +51,7 @@ sensor_accuracy = 0.95
 
 # MPC / prediction parameters
 T_horizon   = 4.0   # s
-dt_pred     = 0.1   # s
+dt_pred     = 0.2   # s
 lambda_disc = 0.1
 
 # Reproducibility
