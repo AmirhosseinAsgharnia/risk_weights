@@ -37,8 +37,8 @@ scenario = SandwichScenario(
     lane_width = 3.7,
 
     # κ(s) = A·sin(ω·s)  — try kappa_A=0 for straight road; λ = 2π/ω
-    kappa_A     = 0.002,    # amplitude (rad/m)
-    kappa_omega = 0.01,    # frequency (rad/m); λ ≈ 209 m
+    kappa_A     = 0.045,    # amplitude (rad/m)
+    kappa_omega = 0.06,    # frequency (rad/m); λ ≈ 209 m
 
     ego_ey   = 0.0,           # within-lane SAE offset (m), 0 = lane centre
     ego_epsi = 0.0,           # initial heading error (rad)
@@ -46,8 +46,8 @@ scenario = SandwichScenario(
 
     # Sandwich: vehicle ahead and behind in same lane, one on the side
     vehicles = [
-        {'x_rel':  15.0, 'v_x': 18.0, 'lane': 0},   # ahead, same lane (slow)
-        {'x_rel':  -8.0, 'v_x': 20.0, 'lane': 0},   # behind, same lane (fast)
+        # {'x_rel':  15.0, 'v_x': 18.0, 'lane': 0},   # ahead, same lane (slow)
+        # {'x_rel':  -8.0, 'v_x': 20.0, 'lane': 0},   # behind, same lane (fast)
         # {'x_rel':   0.0, 'v_x': 20.0, 'lane': 2},   # side, rightmost lane
     ],
 

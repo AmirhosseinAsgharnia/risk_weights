@@ -81,8 +81,9 @@ def predict_zero_control(ego_state, s_ego: float, ego_lane: int,
     sur_fut = []
     for veh in vehicles:
         if veh['valid']:
+            accel = float(veh.get('accel', 0.0))
             sur_fut.append({
-                's':     veh['s'] + veh['v_x'] * _t,
+                's':     veh['s'] + veh['v_x'] * _t + 0.5 * accel * _t ** 2,
                 'y_abs': np.full(N, veh['y_abs']),
             })
         else:

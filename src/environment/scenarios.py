@@ -27,6 +27,9 @@ Environment vector layout for SandwichScenario (length 49):
              lane   : 0 = rightmost
              valid  : 1 = vehicle exists, 0 = empty slot
 
+Optional per-vehicle runtime field:
+  accel      : longitudinal acceleration (m/s²), default 0.0
+
 Lane convention:  0 = rightmost,  n_lanes-1 = leftmost.
 e_y convention:   SAE J670 — zero at lane centre, positive rightward.
 Curvature:        κ(s) = A·sin(ω·s)  (positive = left turn).
@@ -83,10 +86,11 @@ class SandwichScenario:
                     'v_x'  : float(v['v_x']),
                     'lane' : int(v['lane']),
                     'valid': int(v.get('valid', 1)),
+                    'accel': float(v.get('accel', 0.0)),
                 })
             else:
                 self.vehicles.append(
-                    {'x_rel': 0.0, 'v_x': 0.0, 'lane': 0, 'valid': 0}
+                    {'x_rel': 0.0, 'v_x': 0.0, 'lane': 0, 'valid': 0, 'accel': 0.0}
                 )
 
     # ── geometry helpers ──────────────────────────────────────────────────────
@@ -142,6 +146,7 @@ class SandwichScenario:
                 'v_x'  : float(vec[b+1]),
                 'lane' : int(round(vec[b+2])),
                 'valid': int(round(vec[b+3])),
+                'accel': 0.0,
             })
 
         return cls(

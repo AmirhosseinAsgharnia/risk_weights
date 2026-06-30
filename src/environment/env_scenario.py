@@ -8,7 +8,9 @@ Vehicle state dict:
   lane  : lane index (0=rightmost)
   valid : 1 = exists, 0 = empty slot
 
-Surrounding vehicles travel at constant speed with no lateral motion (a=0, delta=0).
+Surrounding vehicles travel with optional constant longitudinal acceleration
+and no lateral motion. Specs without ``accel`` keep the old constant-speed
+behavior.
 """
 
 from environment.scenarios import SandwichScenario
@@ -27,17 +29,27 @@ def init_vehicles(scenario: SandwichScenario, s_ego_init: float = 0.0):
                 's':     s_ego_init + spec['x_rel'],
                 'y_abs': scenario.lane_center_abs(spec['lane']),
                 'v_x':   spec['v_x'],
+                'accel': spec.get('accel', 0.0),
                 'lane':  spec['lane'],
                 'valid': 1,
             })
         else:
-            vehicles.append({'s': 0.0, 'y_abs': 0.0, 'v_x': 0.0, 'lane': 0, 'valid': 0})
+            vehicles.append({
+                's': 0.0, 'y_abs': 0.0, 'v_x': 0.0, 'accel': 0.0,
+                'lane': 0, 'valid': 0,
+            })
     return vehicles
 
 
 def step_vehicles(vehicles, dt: float):
-    """Advance all valid surrounding vehicles by one timestep (constant speed)."""
-    return [
-        {**v, 's': v['s'] + v['v_x'] * dt} if v['valid'] else v
-        for v in vehicles
-    ]
+    """Advance all valid surrounding vehicles by one timestep."""
+    next_vehicles = []
+    for v in vehicles:
+        if not v['valid']:
+            next_vehicles.append(v)
+            continue
+        accel = float(v.get('accel', 0.0))
+        v_x_next = max(float(v['v_x']) + accel * dt, 0.0)
+        s_next = float(v['s']) + float(v['v_x']) * dt + 0.5 * accel * dt ** 2
+        next_vehicles.append({**v, 's': s_next, 'v_x': v_x_next, 'accel': accel})
+    return next_vehicles
