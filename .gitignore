@@ -1,4 +1,2 @@
-.agents
-.vscode
-.codex
-__pycache__
+.venv
+.python-version
