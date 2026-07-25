@@ -12,8 +12,7 @@ class Lane:
 class RoadScenario(Lane):
     "Clothoid Roal Class"
 
-    def __init__(self, S_max = 500 , kappa_max = 0.01, L_s = 60 , lane_num = 3):
-        
+    def __init__(self, S_max = 500 , kappa_max = 0.02, L_s = 50 , lane_num = 3):
         self.s_max = S_max
         self.kappa_max = kappa_max
         
@@ -32,25 +31,33 @@ class RoadScenario(Lane):
         self.sigma = self.kappa_max / self.L_s
 
         self.centreline_builder()
+        self._lane_centre()
+
+        Lanes = []
+
+        for n in range(lane_num):
+            Lanes.append(Lane(n, self.x_lanes[n,:] , self.y_lanes[n,:] , 3.8))
+
 
     def _lane_centre(self):
         """
         Lane centrelines offset from the road reference centreline.
 
-        Convention: d > 0 is LEFT of the direction of travel.
-        Lanes are ordered rightmost (index 0) -> leftmost (index N-1).
+        Convention: d > 0 is RIGHT of the direction of travel.
+        Lanes are ordered rightmost (index 0) -> leftmost (index N-1),
+        so d_c is monotonically DECREASING in the lane index.
         self.x, self.y, self.heading are arrays sampled along s.
         """
         N = int(self.lane_num)
         if N < 1:
             raise ValueError(f"lane_num must be >= 1, got {N}")
 
-        # lateral offset of each lane centre from the reference line
-        self.d_c = (np.arange(N, dtype=np.float64) - (N - 1) / 2.0) * self.l_w
+        # lateral offset of each lane centre from the reference line (right-positive)
+        self.d_c = ((N - 1) / 2.0 - np.arange(N, dtype=np.float64)) * self.l_w
 
-        # left-hand unit normal to the tangent (cos psi, sin psi)
-        n_x = -np.sin(self.heading)
-        n_y = np.cos(self.heading)
+        # right-hand unit normal to the tangent (cos psi, sin psi)
+        n_x = np.sin(self.heading)
+        n_y = -np.cos(self.heading)
 
         # (N, S) arrays: outer product of offsets with the normal field
         self.x_lanes = self.x[None, :] + self.d_c[:, None] * n_x[None, :]
