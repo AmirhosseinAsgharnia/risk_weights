@@ -2,7 +2,12 @@ import numpy as np
 from model.road import RoadScenario
 import matplotlib.pyplot as plt
 
-r = RoadScenario()
+# Adjustable road parameters: [kappa_max, L_s, mu_patch, patch_location]
+Theta_road = [0.02, 50, 0.3, 225.0]
+
+kappa_max, L_s, mu_patch, patch_location = Theta_road
+
+r = RoadScenario(kappa_max=kappa_max, L_s=L_s, mu_patch=mu_patch, patch_location=patch_location)
 
 # x_lanes / y_lanes are lane CENTRELINES, not the physical lane boundary
 # lines. Derive the actual boundary lines by offsetting the reference
@@ -46,7 +51,3 @@ ax[1].set_xlabel("s [m]")
 ax[1].set_ylabel(r"$\mu$")
 
 plt.show()
-
-# assert np.abs(np.diff(r.kappa)).max() < 2 * r.sigma * r.ds, "curvature jumps"
-# assert np.isclose(r.kappa.max(), r.kappa_max), "arc never reached"
-# assert np.isclose(r.kappa[-1], 0.0), "road doesn't end straight"

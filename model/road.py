@@ -9,19 +9,22 @@ class Lane:
     y: float
     l_w: float
 
-class RoadScenario(Lane):
+class RoadScenario:
     "Clothoid Roal Class"
 
-    def __init__(self, S_max = 500 , kappa_max = 0.02, L_s = 50 , lane_num = 3):
+    L_patch = 50.0 # [m] friction patch length, fixed
+
+    def __init__(self, S_max = 500 , kappa_max = 0.02, L_s = 50 , lane_num = 3,
+                 mu_road = 1.0, mu_patch = 0.3, patch_location = 225.0):
         self.s_max = S_max
         self.kappa_max = kappa_max
-        
+
         self.L_s = L_s
         self.L_c = 80 # constant
         self.L_e = (S_max - self.L_s * 2 - self.L_c) / 2
         self.L_1 = (S_max - self.L_s * 2 - self.L_c) / 2
 
-        self.l_w = 3.8 # [m] lane width 
+        self.l_w = 4.0 # [m] lane width
 
         self.lane_num = lane_num
 
@@ -30,13 +33,35 @@ class RoadScenario(Lane):
         self.kappa = np.zeros_like(self.s)
         self.sigma = self.kappa_max / self.L_s
 
+        self.mu_road = mu_road
+
         self.centreline_builder()
         self._lane_centre()
+        self.set_friction_patch(mu_patch, patch_location)
 
-        Lanes = []
+        self.lanes = []
 
         for n in range(lane_num):
-            Lanes.append(Lane(n, self.x_lanes[n,:] , self.y_lanes[n,:] , 3.8))
+            self.lanes.append(Lane(n, self.x_lanes[n,:] , self.y_lanes[n,:] , 3.8))
+
+    def set_friction_patch(self, mu_patch, patch_location):
+        """
+        Low(er)-friction patch of fixed length (self.L_patch) somewhere along the road.
+
+        mu_patch: friction coefficient inside the patch.
+        patch_location: arc-length s [m] where the patch starts.
+        """
+        if not (0 <= patch_location <= self.s_max - self.L_patch):
+            raise ValueError(
+                f"patch_location must be within [0, {self.s_max - self.L_patch}], got {patch_location}"
+            )
+
+        self.mu_patch = mu_patch
+        self.patch_location = patch_location
+
+        self.mu = np.full_like(self.s, self.mu_road)
+        mask = (self.s >= patch_location) & (self.s < patch_location + self.L_patch)
+        self.mu[mask] = mu_patch
 
 
     def _lane_centre(self):
@@ -62,8 +87,6 @@ class RoadScenario(Lane):
         # (N, S) arrays: outer product of offsets with the normal field
         self.x_lanes = self.x[None, :] + self.d_c[:, None] * n_x[None, :]
         self.y_lanes = self.y[None, :] + self.d_c[:, None] * n_y[None, :]
-
-
 
     def kappa_builder(self):
 
