@@ -5,7 +5,7 @@ G = 9.81
 V_MIN = 1.0   # [m/s] low-speed guard: alpha = atan2(., vx) blows up as vx -> 0
 
 
-class CarDynamics:
+class EgoModel:
     """
     Dynamic bicycle model in Frenet-Serret coordinates.
 
@@ -76,7 +76,10 @@ class CarDynamics:
 
         dxdt = np.zeros(6)
         dxdt[self.IDX_S]    = s_dot
-        dxdt[self.IDX_EY]   = vx * np.sin(e_psi) + vy * np.cos(e_psi)
+        # e_y is RIGHT-positive (road.py convention); a positive heading
+        # error (nose turned toward local +y, i.e. LEFT) must therefore
+        # DECREASE e_y, hence the minus sign.
+        dxdt[self.IDX_EY]   = -(vx * np.sin(e_psi) + vy * np.cos(e_psi))
         dxdt[self.IDX_EPSI] = r - kappa * s_dot
         dxdt[self.IDX_VX]   = ax_body + vy * r
         dxdt[self.IDX_VY]   = -vx * r + (F_yf + F_yr) / p.m
