@@ -54,7 +54,7 @@ draw_car(ax, ego_x, ego_y, ego_psi, ego.length, ego.width, "green")
 
 surr_global = []
 for c in surr:
-    s, e_y, e_psi, v, omega = c.state
+    s, e_y, e_psi, v, vy, yaw_rate = c.state
     x, y, psi = frenet_to_global(r, s, e_y, e_psi)
     surr_global.append((x, y, psi))
     draw_car(ax, x, y, psi, c.length, c.width, "black")
