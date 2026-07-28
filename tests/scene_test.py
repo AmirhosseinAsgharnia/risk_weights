@@ -13,16 +13,16 @@ from model.simulation import build_demo_scenario, Simulation
 # =====================================================================
 
 # Adjustable road parameters: [kappa_max, L_s, mu_patch, patch_location]
-Theta_road = [0.01, 50, 0.5, 225.0]
+Theta_road = [0.002, 100, 0.5, 100.0]
 
 EGO_LANE = 1
-EGO_SPEED = 15.0
+EGO_SPEED = 20.0
 
 # other cars: [N (lane), dS (offset from ego), dV (desired-speed offset from ego)]
 # 9 surrounding cars + the ego = 10 actors total.
 surr_cars = [
-    (0, -40.0, 1.0), (0, -5.0, 5.0), (0, 35.0, -5.0), (0, 80.0, 4.0),
-    (1, -25.0, 1.0), (1, 50.0, -2.0),
+    (0, -25.0, 2.0), (0, -5.0, 5.0), (0, -10.0, 5.0), (0, 80.0, -4.0),
+    (1, -25.0, 5.0), (1, 50.0, -2.0),
     (2, -45.0, 3.0), (2, 10.0, -4.0), (2, 55.0, 0.0),
 ]
 
@@ -102,7 +102,7 @@ for aid in order:
     ax.add_patch(rect)
     patches[aid] = rect
 
-HALF_X, HALF_Y = 100.0, 50.0  # [m] chase-cam window around the ego
+HALF_X, HALF_Y = 200.0, 100.0  # [m] chase-cam window around the ego
 
 
 def update(frame_idx):

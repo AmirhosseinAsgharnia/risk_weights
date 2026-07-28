@@ -34,7 +34,16 @@ class MOBILParams:
 
 @dataclass(frozen=True)
 class LaneChangeParams:
-    k_y: float = 0.6                      # [1/s] lateral-error -> desired heading-error gain
+    # PID gains on the lateral tracking error (e_y - e_y_ref):
+    k_y: float = 1.6                      # [1/s]    proportional
+    k_i: float = 0.05                     # [1/s^2]  integral
+    k_d: float = 0.8                      # [-]      derivative (acts on d(error)/dt)
+    integral_max: float = 10.0            # [m*s] anti-windup clamp on the raw integral accumulator
+    integral_error_max: float = 1.0       # [m] only accumulate the integral below this |error| --
+                                           # integral trims small residual bias; feeding it a large,
+                                           # multi-second transient (e.g. curve-entry drift) just adds
+                                           # lag on top of the transient instead of helping it settle
+
     k_psi: float = 3.0                    # [-] heading-error -> steering gain
     k_r_damp: float = 0.0                 # [s] optional yaw-rate damping term in delta
     e_psi_max: float = np.deg2rad(15.0)   # [rad] cap on desired heading error
@@ -123,32 +132,62 @@ def mobil_decision(a_ego_after, a_ego_before,
     return safe and incentive > p.a_thr
 
 
-# ---------- steering: track a lateral reference ----------
+# ---------- steering: PID on the lateral reference ----------
 
 def steering_cmd(state, kappa_s, e_y_ref, e_y_ref_rate, wheelbase,
                   p: LaneChangeParams | None = None,
-                  prev_delta: float | None = None, dt: float | None = None) -> float:
+                  integral: float = 0.0, integrate: bool = True,
+                  prev_delta: float | None = None, dt: float | None = None) -> tuple[float, float]:
     """
     Steering angle command (EgoModel's `delta` input), tracking a lateral
     reference (e_y_ref, e_y_ref_rate) -- the current lane centre when holding
     lane, or model.lane_change's quintic trajectory during a manoeuvre. Both
     cases go through this one function.
 
+    Returns (delta, new_integral) -- new_integral is the updated accumulator
+    and MUST be persisted by the caller (e.g. on Car) and passed back in as
+    `integral` next step; this function stays a pure/stateless computation.
+
     Derivation (right-positive e_y, per EgoModel.state_space):
-        de_y/dt = -(vx*sin(e_psi) + vy*cos(e_psi)) ~= -vx*e_psi   (small angle, vy~0)
-    Want closed-loop  de_y/dt = e_y_ref_rate - k_y*(e_y - e_y_ref)  (tracks the
-    reference, correcting proportionally to the lateral error). Substituting:
-        -vx*e_psi_des = e_y_ref_rate - k_y*(e_y - e_y_ref)
-        e_psi_des = (k_y*(e_y - e_y_ref) - e_y_ref_rate) / vx
-    Dimensionally consistent (k_y in 1/s matches e_y_ref_rate's m/s, dividing by
-    vx gives radians). With e_y_ref_rate = 0 this reduces to the lane-holding
-    case, same sign as the earlier validated fix, now normalized by speed.
+        de_y/dt = -(vx*sin(e_psi) + vy*cos(e_psi))   (exact, no small-angle approx needed)
+    Want closed-loop  de_y/dt = e_y_ref_rate - PID(error)  where error = e_y - e_y_ref
+    and PID(error) = k_y*error + k_i*integral(error) + k_d*d(error)/dt. The D
+    term uses the EXACT de_y/dt above (not a finite difference) minus
+    e_y_ref_rate, so it's noise-free. Substituting into the closed-loop target:
+        -vx*e_psi_des = e_y_ref_rate - PID(error)
+        e_psi_des = (PID(error) - e_y_ref_rate) / vx
+    With k_i = k_d = 0 this is exactly the original P-only controller (same
+    validated sign).
+
+    integrate=False freezes the accumulator (still returned unchanged) without
+    touching dt-gated steering-rate limiting below -- pass this during an
+    active lane change. Integral action fighting an already-planned quintic
+    transient adds pure lag: in testing it turned a 3s nominal lane change
+    into a 15s one with a much bigger overshoot, instead of helping. The
+    accumulator also only accumulates while |error| <= p.integral_error_max
+    (same reasoning: a large multi-second transient, e.g. curve-entry drift
+    while holding a lane, wound the integral up to its clamp in testing
+    without actually speeding up recovery -- integral is for trimming small
+    residual bias once near the reference, not chasing a big transient. It
+    resets to 0 when a lane change starts (model.lane_change.start_lane_change)
+    and resumes accumulating once back to steady, close-to-target holding, and
+    is clamped (p.integral_max) against windup even then.
     """
     p = p or LaneChangeParams()
     _, e_y, e_psi, vx, vy, r = state
 
     vx_safe = max(vx, p.v_min)
-    e_psi_des = (p.k_y * (e_y - e_y_ref) - e_y_ref_rate) / vx_safe
+    error = e_y - e_y_ref
+    e_y_dot = -(vx * np.sin(e_psi) + vy * np.cos(e_psi))
+    error_dot = e_y_dot - e_y_ref_rate
+
+    new_integral = integral
+    if integrate and dt is not None and dt > 0 and abs(error) <= p.integral_error_max:
+        new_integral = float(np.clip(integral + error * dt, -p.integral_max, p.integral_max))
+
+    pid_output = p.k_y * error + p.k_i * new_integral + p.k_d * error_dot
+
+    e_psi_des = (pid_output - e_y_ref_rate) / vx_safe
     e_psi_des = np.clip(e_psi_des, -p.e_psi_max, p.e_psi_max)
 
     delta_ff = wheelbase * kappa_s
@@ -159,4 +198,4 @@ def steering_cmd(state, kappa_s, e_y_ref, e_y_ref_rate, wheelbase,
         max_step = p.delta_rate_max * dt
         delta = np.clip(delta, prev_delta - max_step, prev_delta + max_step)
 
-    return float(delta)
+    return float(delta), new_integral

@@ -38,35 +38,86 @@ def mu_at(road: RoadScenario, s: float) -> float:
     return road.mu[idx]
 
 
-EgoControllerType = Callable[[ActorSnapshot, RoadScenario, float], tuple[float, float]]
+# The ego controller sees its own snapshot AND the full-scene snapshot (so it
+# can look up leaders/followers, e.g. for IDM) -- broadened from "own
+# snapshot only" specifically so car-following controllers are possible
+# without changing this interface again later.
+EgoControllerType = Callable[
+    [ActorSnapshot, "tuple[ActorSnapshot, ...]", RoadScenario, float], tuple[float, float]
+]
 
 
 class CruiseLaneHoldController:
     """
-    Default ego controller -- a placeholder, not a real driving policy: holds
-    a constant target speed via a proportional law and stays in its current
-    lane, using the exact same reference-tracking steering_cmd every other
-    actor uses. It owns the vehicle params it needs (drag compensation,
-    wheelbase feedforward) so Simulation.step() never contains ego-specific
-    logic; swap in a smarter controller (e.g. MPC) by passing a different
-    callable as Scenario.ego_controller -- the engine's interface doesn't change.
+    Ego controller placeholder: holds a constant target speed via a
+    proportional law and stays in its current lane, using the exact same
+    reference-tracking steering_cmd every other actor uses. It owns the
+    vehicle params it needs (drag compensation, wheelbase feedforward) so
+    Simulation.step() never contains ego-specific logic; swap in a smarter
+    controller (e.g. MPC) by passing a different callable as
+    Scenario.ego_controller -- the engine's interface doesn't change.
+
+    Does NOT react to traffic -- see IDMLaneHoldController for that.
     """
 
     def __init__(self, target_speed: float, vehicle_params: VehicleParameters | None = None,
-                 lc_params: LaneChangeParams | None = None, k_cruise: float = 0.5):
+                 lc_params: LaneChangeParams | None = None, k_cruise: float = 0.5,
+                 dt: float = 0.1):
         self.target_speed = target_speed
         self.p = vehicle_params or VehicleParameters()
         self.lc_params = lc_params or LaneChangeParams()
         self.k_cruise = k_cruise
+        self.dt = dt
+        self._integral = 0.0
+        self._prev_delta = None
 
-    def __call__(self, snapshot: ActorSnapshot, road: RoadScenario, t: float) -> tuple[float, float]:
+    def __call__(self, snapshot: ActorSnapshot, full_snapshot: "tuple[ActorSnapshot, ...]",
+                 road: RoadScenario, t: float) -> tuple[float, float]:
         vx = snapshot.state[3]
         a_net = self.k_cruise * (self.target_speed - vx)
         a_x = a_net + (self.p.C_d / self.p.m) * vx**2
 
         kappa_s = kappa_at(road, snapshot.state[0])
         e_y_ref = road.d_c[snapshot.current_lane]  # this placeholder never changes lanes
-        delta = steering_cmd(snapshot.state, kappa_s, e_y_ref, 0.0, self.p.L, self.lc_params)
+        delta, self._integral = steering_cmd(
+            snapshot.state, kappa_s, e_y_ref, 0.0, self.p.L, self.lc_params,
+            integral=self._integral, prev_delta=self._prev_delta, dt=self.dt,
+        )
+        self._prev_delta = delta
+        return float(a_x), float(delta)
+
+
+class IDMLaneHoldController:
+    """
+    Ego controller using IDM for longitudinal accel -- reacts to whatever's
+    ahead in its own lane(s), unlike CruiseLaneHoldController -- plus the same
+    lane-hold steering as everyone else. No MOBIL: it never initiates a lane
+    change on its own. A temporary stand-in requested in place of the cruise
+    placeholder; swap back to CruiseLaneHoldController (or something smarter)
+    via Scenario.ego_controller whenever needed -- the engine doesn't care.
+    """
+
+    def __init__(self, vehicle_params: VehicleParameters | None = None,
+                 lc_params: LaneChangeParams | None = None, dt: float = 0.1):
+        self.p = vehicle_params or VehicleParameters()
+        self.lc_params = lc_params or LaneChangeParams()
+        self.dt = dt
+        self._integral = 0.0
+        self._prev_delta = None
+
+    def __call__(self, snapshot: ActorSnapshot, full_snapshot: "tuple[ActorSnapshot, ...]",
+                 road: RoadScenario, t: float) -> tuple[float, float]:
+        a_net, _leader_id = longitudinal_accel(full_snapshot, snapshot.id)
+        vx = snapshot.state[3]
+        a_x = a_net + (self.p.C_d / self.p.m) * vx**2
+
+        kappa_s = kappa_at(road, snapshot.state[0])
+        e_y_ref = road.d_c[snapshot.current_lane]  # lane-hold only, no MOBIL for the ego
+        delta, self._integral = steering_cmd(
+            snapshot.state, kappa_s, e_y_ref, 0.0, self.p.L, self.lc_params,
+            integral=self._integral, prev_delta=self._prev_delta, dt=self.dt,
+        )
+        self._prev_delta = delta
         return float(a_x), float(delta)
 
 
@@ -296,7 +347,7 @@ class Simulation:
             idm_a = None
 
             if is_ego:
-                a_x, delta = scenario.ego_controller(snap, road, t)
+                a_x, delta = scenario.ego_controller(snap, snapshot, road, t)
             else:
                 idm_a, leader_id = longitudinal_accel(snapshot, car.id)
                 a_net = float(np.clip(idm_a, snap.idm_params.a_min, snap.idm_params.a_max))
@@ -305,8 +356,14 @@ class Simulation:
 
                 lc_p = resolve_params(car.lane_change_params, scenario.lc_defaults)
                 e_y_ref, e_y_ref_rate = lane_change_reference(car, road, t)
-                delta = steering_cmd(car.state, kappa_s, e_y_ref, e_y_ref_rate, model.p.L,
-                                      lc_p, prev_delta=car.last_delta, dt=dt)
+                # integrate=False during an active manoeuvre: see steering_cmd's
+                # docstring -- integral action against an already-planned
+                # quintic transient is pure lag, not help.
+                delta, car.lane_error_integral = steering_cmd(
+                    car.state, kappa_s, e_y_ref, e_y_ref_rate, model.p.L, lc_p,
+                    integral=car.lane_error_integral, integrate=not car.lane_change_active,
+                    prev_delta=car.last_delta, dt=dt,
+                )
 
             u = (a_x, delta)
             tire = model.tire_diagnostics(car.state, u, kappa_s, mu_s)
@@ -429,9 +486,17 @@ class Simulation:
 
 def build_demo_scenario(theta_road, ego_lane: int, ego_speed: float, surr_cars,
                          dt: float = 0.1, lane_change_cooldown: float = 3.0,
-                         rng: np.random.Generator | None = None) -> Scenario:
+                         rng: np.random.Generator | None = None,
+                         ego_controller: EgoControllerType | None = None) -> Scenario:
     """Convenience constructor matching the scenario tests/scene_test.py has used
-    throughout: a RoadScenario from Theta_road, an ego, and a list of (N, dS, dV) traffic cars."""
+    throughout: a RoadScenario from Theta_road, an ego, and a list of (N, dS, dV) traffic cars.
+
+    ego_controller: defaults to IDMLaneHoldController (reacts to traffic ahead,
+    still no MOBIL) -- a temporary stand-in for CruiseLaneHoldController.
+    Pass CruiseLaneHoldController(...) explicitly (or anything else matching
+    EgoControllerType) to go back to the non-reactive placeholder or swap in
+    something smarter; nothing else about the engine needs to change.
+    """
     kappa_max, L_s, mu_patch, patch_location = theta_road
     road = RoadScenario(kappa_max=kappa_max, L_s=L_s, mu_patch=mu_patch, patch_location=patch_location)
 
@@ -440,9 +505,10 @@ def build_demo_scenario(theta_road, ego_lane: int, ego_speed: float, surr_cars,
 
     vehicle_params = VehicleParameters()
     lc_defaults = LaneChangeParams()
-    ego_controller = CruiseLaneHoldController(
-        target_speed=ego_speed, vehicle_params=vehicle_params, lc_params=lc_defaults,
-    )
+
+    if ego_controller is None:
+        ego.idm_params = IDMParams(v0=ego_speed)  # ego's own IDM desired speed
+        ego_controller = IDMLaneHoldController(vehicle_params=vehicle_params, lc_params=lc_defaults, dt=dt)
 
     return Scenario(
         road=road, ego=ego, traffic=traffic, ego_controller=ego_controller,

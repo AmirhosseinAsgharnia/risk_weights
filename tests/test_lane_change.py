@@ -130,7 +130,11 @@ def test_steering_direction_is_correct_for_a_rightward_target():
     saw_negative_e_psi = False
     for _ in range(15):  # 1.5s into a 3s manoeuvre
         e_y_ref, e_y_ref_rate = lane_change_reference(car, road, t)
-        delta = steering_cmd(car.state, 0.0, e_y_ref, e_y_ref_rate, model.p.L, lc_p)
+        delta, car.lane_error_integral = steering_cmd(
+            car.state, 0.0, e_y_ref, e_y_ref_rate, model.p.L, lc_p,
+            integral=car.lane_error_integral, prev_delta=car.last_delta, dt=dt,
+        )
+        car.last_delta = delta
         u = (0.0, delta)
         car.state = model.step(car.state, u, kappa=0.0, mu=1.0, dt=dt)
         if car.state[2] < 0:
@@ -156,7 +160,11 @@ def test_lane_change_settles_without_sustained_oscillation():
     overshoots = []
     for _ in range(150):  # 15s -- well past the 3s nominal duration
         e_y_ref, e_y_ref_rate = lane_change_reference(car, road, t)
-        delta = steering_cmd(car.state, 0.0, e_y_ref, e_y_ref_rate, model.p.L, lc_p)
+        delta, car.lane_error_integral = steering_cmd(
+            car.state, 0.0, e_y_ref, e_y_ref_rate, model.p.L, lc_p,
+            integral=car.lane_error_integral, prev_delta=car.last_delta, dt=dt,
+        )
+        car.last_delta = delta
         car.state = model.step(car.state, (0.0, delta), kappa=0.0, mu=1.0, dt=dt)
         t += dt
         try_complete_lane_change(car, road, t, tol)

@@ -80,6 +80,9 @@ def start_lane_change(car, target_lane: int, t: float) -> None:
     car.lane_change_active = True
     car.lane_change_start_time = t
     car.e_y_start = car.state[1]
+    # fresh manoeuvre, fresh steering-PID integrator -- don't carry over
+    # whatever trim the old lane-holding accumulated.
+    car.lane_error_integral = 0.0
 
 
 def try_complete_lane_change(car, road: RoadScenario, t: float,

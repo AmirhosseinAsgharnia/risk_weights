@@ -51,6 +51,10 @@ class Car:
     # last commanded steering angle, for optional steering-rate limiting
     last_delta: float = 0.0
 
+    # steering PID's integral accumulator (IDM_MOBIL.steering_cmd); reset to
+    # 0 whenever a lane change starts (model.lane_change.start_lane_change)
+    lane_error_integral: float = 0.0
+
     # consecutive steps with saturated tires, for the loss-of-control duration check
     saturation_streak: int = 0
 
