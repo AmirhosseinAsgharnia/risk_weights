@@ -30,3 +30,9 @@ class VehicleParameters:
     def Fz_nom(self) -> float:
         """[N] nominal per-axle static load, used to normalize tire stiffness."""
         return self.m * G / 2.0
+
+    @property
+    def SSF(self) -> float:
+        """[-] Static Stability Factor: W_c / (2*h_CG). Rollover threshold
+        lateral accel (in g) -- exceeding SSF*g is the rollover onset."""
+        return self.W_c / (2.0 * self.h_CG)

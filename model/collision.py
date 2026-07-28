@@ -51,6 +51,39 @@ def sat_overlap(corners_a, corners_b) -> bool:
     return True
 
 
+def min_separation(corners_a, corners_b) -> tuple[float, np.ndarray]:
+    """
+    Signed separation between two convex quads along the best SAT axis, and
+    that axis as a unit vector (sign/direction is arbitrary -- callers using
+    it in a quadratic form n^T M n, e.g. projecting covariance, are invariant
+    to it). Negative means overlapping (magnitude = axis-aligned penetration
+    depth); positive means separated (magnitude = gap along that axis).
+
+    This is exact when the two bodies' closest features are edge-parallel --
+    true for the common case here (roughly road-aligned car rectangles). For
+    arbitrary rotations it's the standard SAT-axis approximation to the true
+    Euclidean distance between two convex polygons: exact whenever the
+    closest-approach direction coincides with one of the candidate edge
+    normals, an upper bound on the true gap otherwise (vertex-vertex closest
+    approach). Reuses the same _edge_axes/_project SAT machinery as
+    sat_overlap rather than a separate distance algorithm.
+    """
+    best_gap = -np.inf
+    best_axis = np.array([1.0, 0.0])
+    for axis in _edge_axes(corners_a) + _edge_axes(corners_b):
+        norm = np.hypot(axis[0], axis[1])
+        if norm < 1e-9:
+            continue
+        unit = np.array([axis[0] / norm, axis[1] / norm])
+        amin, amax = _project(corners_a, unit)
+        bmin, bmax = _project(corners_b, unit)
+        gap = max(bmin - amax, amin - bmax)
+        if gap > best_gap:
+            best_gap = gap
+            best_axis = unit
+    return float(best_gap), best_axis
+
+
 # ---------- broad phase ----------
 
 def broad_phase_overlap(a: ActorSnapshot, b: ActorSnapshot, margin: float = 0.5) -> bool:
