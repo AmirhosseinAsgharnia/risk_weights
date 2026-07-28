@@ -6,7 +6,10 @@ from matplotlib.patches import Rectangle
 
 from model.car_init import frenet_to_global
 from model.simulation import build_demo_scenario, Simulation
-from model.risk import RiskParams, rollover_risk, slip_risk, lane_departure_risk, road_departure_risk, car_to_car_risk
+from model.risk import (
+    RiskParams, rollover_risk, slip_risk, lane_departure_risk, road_departure_risk, car_to_car_risk,
+    EKFPropagator, propagate_ego_trajectory,
+)
 
 # =====================================================================
 # 1) initialize the scenario (all logic lives under model/, nothing here
@@ -14,7 +17,7 @@ from model.risk import RiskParams, rollover_risk, slip_risk, lane_departure_risk
 # =====================================================================
 
 # Adjustable road parameters: [kappa_max, L_s, mu_patch, patch_location]
-Theta_road = [0.002, 60, 0.5, 200.0]
+Theta_road = [0.005, 60, 0.5, 250.0]
 
 EGO_LANE = 1
 EGO_SPEED = 20.0
@@ -22,9 +25,9 @@ EGO_SPEED = 20.0
 # other cars: [N (lane), dS (offset from ego), dV (desired-speed offset from ego)]
 # 9 surrounding cars + the ego = 10 actors total.
 surr_cars = [
-    (0, -25.0, 2.0), (0, -5.0, 5.0), (0, -10.0, 5.0), (0, 80.0, -4.0),
-    (1, -25.0, 5.0), (1, 50.0, -2.0),
-    (2, -45.0, 3.0), (2, 10.0, -4.0), (2, 55.0, 0.0),
+    (0, -25.0, 2.0), (0, -10.0, 5.0), (0, -15.0, 5.0), (0, 80.0, 4.0),
+    (1, -30.0, 2.0), (1, 70.0, 2.0),
+    (2, -45.0, 3.0), (2, 10.0, 4.0), (2, 55.0, 0.0),
 ]
 
 T_SIM = 20.0
@@ -131,6 +134,37 @@ def _risk_bar_values(frame_idx):
 risk_frames = [_risk_bar_values(i) for i in range(len(frames))]
 
 # =====================================================================
+# 2c) a forward-predicted ego path at every recorded frame, via
+#     model.risk.propagate_ego_trajectory -- same EKF used for the c2c risk
+#     forecast, just read out as (x, y) means instead of feeding a risk
+#     evaluator. No MPC control sequence exists in this codebase, so the
+#     control is held constant (steering = last applied command, a_x = 0,
+#     matching 2b's instantaneous-risk assumption) over the horizon; it's a
+#     "coast on the current curve" preview, not a claim about future intent.
+# =====================================================================
+
+PREDICT_HORIZON_S = 2.5  # [s]
+_predict_propagator = EKFPropagator(Q=risk_params.Q_ego)
+
+
+def _predicted_path(frame_idx):
+    ego_state, _, ego_delta, _ = _actor_states_at_frame(frame_idx)
+    n_steps = int(round(PREDICT_HORIZON_S / scenario.dt))
+    controls = [(0.0, ego_delta)] * n_steps
+    trajectory = propagate_ego_trajectory(
+        ego_state, risk_params.R_ego, controls, road, scenario.vehicle_params, _predict_propagator, scenario.dt,
+    )
+    xs, ys = [], []
+    for mean, _ in trajectory:
+        x, y, _ = frenet_to_global(road, mean[0], mean[1], mean[2])
+        xs.append(x)
+        ys.append(y)
+    return xs, ys
+
+
+predicted_frames = [_predicted_path(i) for i in range(len(frames))]
+
+# =====================================================================
 # 3) show the animation (matplotlib only ever reads `frames`/`risk_frames`,
 #    built above entirely from the simulation's returned history --
 #    rendering cannot feed back into or alter the simulation result)
@@ -178,7 +212,11 @@ for aid in order:
     ax.add_patch(rect)
     patches[aid] = rect
 
-HALF_X, HALF_Y = 200.0, 100.0  # [m] chase-cam window around the ego
+predicted_line, = ax.plot([], [], linestyle="--", color="green", linewidth=1.5, alpha=0.7,
+                           label=f"ego predicted path ({PREDICT_HORIZON_S:.1f}s)", zorder=4)
+ax.legend(loc="upper right")
+
+HALF_X, HALF_Y = 150.0, 100.0  # [m] chase-cam window around the ego
 
 
 def update(frame_idx):
@@ -193,11 +231,14 @@ def update(frame_idx):
     ax.set_xlim(ego_x - HALF_X, ego_x + HALF_X)
     ax.set_ylim(ego_y - HALF_Y, ego_y + HALF_Y)
 
+    pred_xs, pred_ys = predicted_frames[frame_idx]
+    predicted_line.set_data(pred_xs, pred_ys)
+
     for bar, value in zip(risk_bars, risk_frames[frame_idx]):
         bar.set_height(value)
         bar.set_color("#C44E52" if value >= 0.5 else "#4C72B0")
 
-    return list(patches.values()) + list(risk_bars)
+    return list(patches.values()) + list(risk_bars) + [predicted_line]
 
 
 anim = animation.FuncAnimation(fig, update, frames=len(frames), interval=scenario.dt * 1000, blit=False)

@@ -26,7 +26,7 @@ class IDMParams:
 
 @dataclass(frozen=True)
 class MOBILParams:
-    politeness: float = 0.3  # [-] weight given to neighbours' induced accelerations
+    politeness: float = 0.0  # [-] weight given to neighbours' induced accelerations
     a_thr: float = 0.2       # [m/s^2] minimum incentive to bother changing lane
     b_safe: float = 4.0      # [m/s^2] max deceleration a change may impose on the new follower
     noise_std: float = 0.0   # [m/s^2] std-dev of random "whim" added to the incentive

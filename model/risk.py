@@ -244,7 +244,7 @@ class RiskParams:
     sigma_min_road: float = 0.02
     sigma_min_c2c: float = 0.1
 
-    d_safe: float = 4.0     # [m] default: one ego length
+    d_safe: float = 2.0     # [m] default: half an ego length
     lse_beta: float = 8.0   # [-] LSE smooth-max temperature for c2c neighbour aggregation
     singularity_threshold: float = 0.2  # see frenet_to_global_with_cov
 
