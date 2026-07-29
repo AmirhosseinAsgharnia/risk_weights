@@ -9,7 +9,7 @@ what it's tracking mid-flight, and when it's done.
 
 import numpy as np
 from dataclasses import dataclass
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 
 
 @dataclass(frozen=True)

@@ -24,7 +24,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from scipy.special import erf, logsumexp
 
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 from model.car.config import VehicleParameters
 from model.car.model import EgoModel, Propagator
 from model.car_init import frenet_to_global

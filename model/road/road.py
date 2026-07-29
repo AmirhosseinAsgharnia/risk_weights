@@ -32,8 +32,16 @@ class Road:
         self.mu    = mu_road * np.ones_like(self.s)
         self.sigma = self.kappa_max / self.L_clothoid
 
-    @property
-    def kappa(self):
+        self.calculate()
+
+    def calculate(self):
+
+        self.kappa = self.kappa_calc()
+        self.heading = self.heading_calc()
+        self.x_road , self.y_road = self.road_calc()
+
+
+    def kappa_calc(self):
 
         "Building the curvature"
 
@@ -60,9 +68,8 @@ class Road:
         kappa[mask_5] = 0
 
         return kappa
-
-    @property
-    def heading(self):
+    
+    def heading_calc(self):
 
         "Building the heading"
 
@@ -72,10 +79,12 @@ class Road:
 
         return heading
 
-    @property
-    def x_road(self):
-        return cumulative_trapezoid(np.cos(self.heading) , self.s , self.ds , initial = 0.0)
+    def road_calc(self):
 
-    @property
-    def y_road(self):
-        return cumulative_trapezoid(np.sin(self.heading) , self.s , self.ds , initial = 0.0)
+        x_road = cumulative_trapezoid(np.cos(self.heading) , self.s , self.ds , initial = 0.0)
+        y_road = cumulative_trapezoid(np.sin(self.heading) , self.s , self.ds , initial = 0.0)
+        return x_road , y_road
+
+    # def lane_centreline(self):
+
+    #     self.lane_centre = np.zer

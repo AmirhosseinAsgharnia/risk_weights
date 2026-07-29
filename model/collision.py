@@ -8,7 +8,7 @@ is decided here, independently, from vehicle geometry.
 
 import numpy as np
 from dataclasses import dataclass
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 from model.car_init import frenet_to_global
 from model.traffic import ActorSnapshot
 

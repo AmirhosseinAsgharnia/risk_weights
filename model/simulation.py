@@ -9,7 +9,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 from model.car.config import VehicleParameters
 from model.car.model import EgoModel, SimulationDivergedError
 from model.car_init import Car, resolve_params, frenet_to_global, init_ego, init_surr

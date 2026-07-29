@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 from dataclasses import dataclass, field
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 from model.car.config import VehicleParameters
 from model.IDM_MOBIL import IDMParams, MOBILParams, LaneChangeParams
 

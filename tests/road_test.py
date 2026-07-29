@@ -6,4 +6,5 @@ road = Road(s_max = 500, kappa_max = 0.002 , L_clothoid = 50 , lane_num = 3 , mu
 
 fig, axe = plt.subplots(1 , 1, figsize = (5 , 5))
 axe.plot(road.x_road , road.y_road , linestyle = 'solid')
+plt.tight_layout
 plt.show()

@@ -10,7 +10,7 @@ Car. model.simulation is the only place snapshots are built and proposals applie
 
 import numpy as np
 from dataclasses import dataclass, replace
-from model.road import RoadScenario
+from model.road.road import RoadScenario
 from model.car_init import Car, resolve_params
 from model.lane_change import occupied_lanes
 from model.IDM_MOBIL import IDMParams, MOBILParams, idm_accel, gap_to_lead, mobil_incentive
