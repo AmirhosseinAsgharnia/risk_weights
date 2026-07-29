@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from model.car_model import EgoModel, SimulationDivergedError, assert_finite
+from model.car.model import EgoModel, SimulationDivergedError, assert_finite
 
 
 def test_tire_forces_are_saturated_to_friction_limit():

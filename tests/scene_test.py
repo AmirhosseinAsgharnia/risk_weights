@@ -17,7 +17,7 @@ from model.risk import (
 # =====================================================================
 
 # Adjustable road parameters: [kappa_max, L_s, mu_patch, patch_location]
-Theta_road = [0.005, 60, 0.5, 250.0]
+Theta_road = [0.005, 60, 0.2, 250.0]
 
 EGO_LANE = 1
 EGO_SPEED = 20.0

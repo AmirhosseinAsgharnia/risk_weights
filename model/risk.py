@@ -22,12 +22,11 @@ divide-by-zero at t=0, where the covariance may be ~0).
 
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Protocol
 from scipy.special import erf, logsumexp
 
 from model.road import RoadScenario
-from model.config import VehicleParameters
-from model.car_model import EgoModel
+from model.car.config import VehicleParameters
+from model.car.model import EgoModel, Propagator
 from model.car_init import frenet_to_global
 from model.collision import rectangle_corners, min_separation, check_singularity_risk
 
@@ -60,19 +59,6 @@ def numerical_jacobian(f, x0: np.ndarray, eps: float = 1e-6) -> np.ndarray:
         f_minus = np.atleast_1d(np.asarray(f(x0 - dx), dtype=np.float64))
         J[:, i] = (f_plus - f_minus) / (2.0 * eps)
     return J
-
-
-# ---------- propagator strategy ----------
-
-class Propagator(Protocol):
-    """Swappable covariance-propagation strategy. EKFPropagator (below) is
-    the default; a sigma-point (UKF) propagator could implement the same
-    interface -- EKF's linearization understates uncertainty near tire
-    saturation and the rollover ceiling, and CTRV's turn kinematics are
-    nonlinear enough that sigma points would do better, but that's not
-    implemented here (flagged as a known gap, not silently skipped)."""
-
-    def propagate(self, mean: np.ndarray, cov: np.ndarray, step_fn) -> tuple[np.ndarray, np.ndarray]: ...
 
 
 @dataclass
@@ -130,33 +116,6 @@ def propagate_ego_trajectory(x0, P0, controls, road: RoadScenario, vehicle_param
         mean, cov = propagator.propagate(mean, cov, step_fn)
         trajectory.append((mean, cov))
 
-    return trajectory
-
-
-def ctrv_step(x: np.ndarray, dt: float) -> np.ndarray:
-    """Exact CTRV mean update, global state [x, y, psi, v, psi_dot]."""
-    px, py, psi, v, psi_dot = x
-    if abs(psi_dot) < 1e-6:
-        px_n = px + v * np.cos(psi) * dt
-        py_n = py + v * np.sin(psi) * dt
-        psi_n = psi
-    else:
-        psi_n = psi + psi_dot * dt
-        px_n = px + (v / psi_dot) * (np.sin(psi_n) - np.sin(psi))
-        py_n = py + (v / psi_dot) * (np.cos(psi) - np.cos(psi_n))
-    return np.array([px_n, py_n, psi_n, v, psi_dot], dtype=np.float64)
-
-
-def propagate_ctrv_trajectory(x0, P0, n_steps: int, dt: float,
-                               propagator: Propagator) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Same idea as propagate_ego_trajectory, for a CTRV neighbour. Returns
-    [(mean, cov)] for t = 0..n_steps (n_steps+1 entries)."""
-    mean = np.asarray(x0, dtype=np.float64)
-    cov = np.asarray(P0, dtype=np.float64)
-    trajectory = [(mean, cov)]
-    for _ in range(n_steps):
-        mean, cov = propagator.propagate(mean, cov, lambda x: ctrv_step(x, dt))
-        trajectory.append((mean, cov))
     return trajectory
 
 

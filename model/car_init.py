@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 from dataclasses import dataclass, field
 from model.road import RoadScenario
-from model.config import VehicleParameters
+from model.car.config import VehicleParameters
 from model.IDM_MOBIL import IDMParams, MOBILParams, LaneChangeParams
 
 S_EGO0 = 30.0     # [m] ego always starts here

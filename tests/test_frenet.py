@@ -1,7 +1,7 @@
 import numpy as np
 from model.road import RoadScenario
 from model.car_init import frenet_to_global
-from model.car_model import EgoModel
+from model.car.model import EgoModel
 
 
 def test_frenet_to_global_on_straight_road_matches_direct_geometry():

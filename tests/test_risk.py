@@ -3,11 +3,11 @@ import pytest
 from scipy.optimize import brentq
 
 from model.road import RoadScenario
-from model.config import VehicleParameters
-from model.car_model import EgoModel
+from model.car.config import VehicleParameters
+from model.car.model import EgoModel, propagate_ctrv_trajectory
 from model.risk import (
     RiskParams, EKFPropagator, numerical_jacobian,
-    propagate_ego_trajectory, propagate_ctrv_trajectory,
+    propagate_ego_trajectory,
     frenet_to_global_with_cov, evaluate_risk_profile,
     rollover_risk, slip_risk, lane_departure_risk, road_departure_risk, car_to_car_risk,
 )

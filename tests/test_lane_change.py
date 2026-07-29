@@ -1,6 +1,6 @@
 import numpy as np
 from model.road import RoadScenario
-from model.car_model import EgoModel
+from model.car.model import EgoModel
 from model.car_init import Car
 from model.IDM_MOBIL import LaneChangeParams, steering_cmd
 from model.lane_change import (

@@ -1,7 +1,7 @@
 import numpy as np
 from model.road import RoadScenario
 from model.car_init import Car, init_surr, resolve_params
-from model.config import VehicleParameters
+from model.car.config import VehicleParameters
 from model.IDM_MOBIL import IDMParams, MOBILParams
 from model.traffic import build_snapshot
 

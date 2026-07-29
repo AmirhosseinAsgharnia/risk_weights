@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from model.road import RoadScenario
-from model.config import VehicleParameters
-from model.car_model import EgoModel, SimulationDivergedError
+from model.car.config import VehicleParameters
+from model.car.model import EgoModel, SimulationDivergedError
 from model.car_init import Car, resolve_params, frenet_to_global, init_ego, init_surr
 from model.IDM_MOBIL import IDMParams, MOBILParams, LaneChangeParams, gap_to_lead, steering_cmd
 from model.lane_change import (
