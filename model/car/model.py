@@ -4,7 +4,7 @@ from model.car.config import VehicleParameters
 
 G = 9.81
 
-class Dynamics:
+class CarDynamics:
     """The Frenet Serret Coordinate model of a vehicle:
     [s e_y e_psi v_x v_y r]
     We use SAE J670 Frame: X-Forward Y-Right and Z-Down
