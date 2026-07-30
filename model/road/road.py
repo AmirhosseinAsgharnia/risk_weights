@@ -82,23 +82,17 @@ class Road:
 
         "Building the heading"
 
-        size_of_elements = np.size(kappa , axis = 0)
-
-        size_of_array    = np.size(kappa , axis = 1)
-
-        heading = np.zeros((size_of_elements , size_of_array) , dtype = np.float16)
-
-        for l in range(np.size(kappa, axis = 0)):
-
-            heading[l , :] = cumulative_trapezoid(kappa[l , :] , self.s , self.ds , initial = 0.0)
+        heading = cumulative_trapezoid(kappa , self.s , axis = 1 , initial = 0.0)
 
         return heading
 
     def cartesean_calc(self, heading, x_init, y_init):
 
-        x = cumulative_trapezoid(np.cos(heading) , self.s , self.ds , initial = x_init)
+        # x = np.zeros_like(heading , dtype = np.float16)
+        # y = np.zeros_like(heading , dtype = np.float16)
 
-        y = cumulative_trapezoid(np.sin(heading) , self.s , self.ds , initial = y_init)
+        x = cumulative_trapezoid(np.cos(heading) , self.s , axis = 1 , initial = x_init)
+        y = cumulative_trapezoid(np.sin(heading) , self.s , axis = 1 , initial = y_init)
 
         return x , y
 
