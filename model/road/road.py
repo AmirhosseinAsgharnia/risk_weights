@@ -23,26 +23,32 @@ class Road:
         self.L_curve = 80 # constant
         self.L_e = (s_max - self.L_clothoid * 2 - self.L_curve) / 2
         self.L_1 = (s_max - self.L_clothoid * 2 - self.L_curve) / 2
+        self.sigma = self.kappa_max / self.L_clothoid
 
         self.l_w = 4.0 # [m] lane width
         self.lane_num = lane_num
 
         self.ds    = 0.1
-        self.s     = np.arange(0 , s_max , self.ds)
-        self.mu    = mu_road * np.ones_like(self.s)
-        self.sigma = self.kappa_max / self.L_clothoid
+        self.s     = np.arange(0 , s_max , self.ds , dtype = np.float16).reshape(1 , -1)
 
-        self.centre_point = np.zeros((self.lane_num , ))
-        self.lanes = np.zeros((lane_num , np.size(self.s))) 
+        self.mu    = mu_road * np.ones_like(self.s , dtype = np.float16)
+
+        self.centre_point = np.zeros((self.lane_num , ) , dtype = np.float16)
+        self.lanes = np.zeros((lane_num , np.size(self.s , axis = 1)) , dtype = np.float16) 
 
         self.calculate()
 
     def calculate(self):
 
         self.kappa = self.kappa_calc()
-        self.heading = self.heading_calc()
-        self.x_road , self.y_road = self.road_calc()
 
+        self.heading_road = self.heading_calc(self.kappa)
+        self.kappa_lane, self.x_lane_centre, self.y_lane_centre = self.lane_kappa_adjuster(self.heading_road)
+
+        self.heading_lane = self.heading_calc(self.kappa_lane)
+
+        self.x_road , self.y_road = self.cartesean_calc(self.heading_road, 0 , 0)
+        self.x_lane , self.y_lane = self.cartesean_calc(self.heading_lane, self.x_lane_centre , self.y_lane_centre)
 
     def kappa_calc(self):
 
@@ -72,25 +78,31 @@ class Road:
 
         return kappa
     
-    def heading_calc(self):
+    def heading_calc(self, kappa):
 
         "Building the heading"
 
-        heading = np.zeros_like(self.s)
+        size_of_elements = np.size(kappa , axis = 0)
 
-        heading = cumulative_trapezoid(self.kappa , self.s , self.ds , initial = 0.0)
+        size_of_array    = np.size(kappa , axis = 1)
+
+        heading = np.zeros((size_of_elements , size_of_array) , dtype = np.float16)
+
+        for l in range(np.size(kappa, axis = 0)):
+
+            heading[l , :] = cumulative_trapezoid(kappa[l , :] , self.s , self.ds , initial = 0.0)
 
         return heading
 
-    def road_calc(self):
+    def cartesean_calc(self, heading, x_init, y_init):
 
-        x_road = cumulative_trapezoid(np.cos(self.heading) , self.s , self.ds , initial = 0.0)
+        x = cumulative_trapezoid(np.cos(heading) , self.s , self.ds , initial = x_init)
 
-        y_road = cumulative_trapezoid(np.sin(self.heading) , self.s , self.ds , initial = 0.0)
+        y = cumulative_trapezoid(np.sin(heading) , self.s , self.ds , initial = y_init)
 
-        return x_road , y_road
+        return x , y
 
-    def lane_kappa_adjuster(self):
+    def lane_kappa_adjuster(self , heading):
 
         kappa_lane = np.zeros((self.lane_num , np.size(self.s)) , dtype = np.float16)
 
@@ -104,16 +116,16 @@ class Road:
 
                 kappa_lane[l , :] = 1 / (1 / self.kappa + self.l_w / 2)
 
-                x_lane[l] = self.l_w * np.sin(self.heading[0]) / 2
+                x_lane[l] = self.l_w * np.sin(heading[0]) / 2
 
-                y_lane[l] = self.l_w * np.cos(self.heading[0]) / 2
+                y_lane[l] = self.l_w * np.cos(heading[0]) / 2
 
             else:
 
                 kappa_lane[l , :] = 1 / (1 / self.kappa + (l - 1) * self.l_w + self.l_w / 2)
 
-                x_lane[l] = self.l_w * np.sin(self.heading[0]) / 2 + (l - 1) * self.l_w * np.sin(self.heading[0])
+                x_lane[l] = self.l_w * np.sin(heading[0]) / 2 + (l - 1) * self.l_w * np.sin(heading[0])
 
-                y_lane[l] = self.l_w * np.cos(self.heading[0]) / 2 + (l - 1) * self.l_w * np.cos(self.heading[0])
+                y_lane[l] = self.l_w * np.cos(heading[0]) / 2 + (l - 1) * self.l_w * np.cos(heading[0])
 
-        return kappa_lane
+        return kappa_lane, x_lane, y_lane
