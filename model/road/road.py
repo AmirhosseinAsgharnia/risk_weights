@@ -32,6 +32,9 @@ class Road:
         self.mu    = mu_road * np.ones_like(self.s)
         self.sigma = self.kappa_max / self.L_clothoid
 
+        self.centre_point = np.zeros((self.lane_num , ))
+        self.lanes = np.zeros((lane_num , np.size(self.s))) 
+
         self.calculate()
 
     def calculate(self):
@@ -45,7 +48,7 @@ class Road:
 
         "Building the curvature"
 
-        kappa = np.zeros_like(self.s)
+        kappa = np.zeros_like(self.s , dtype = np.float16)
 
         # kappa = 0
         mask_1 = (self.s >= 0) & (self.s < self.L_1)
@@ -82,9 +85,35 @@ class Road:
     def road_calc(self):
 
         x_road = cumulative_trapezoid(np.cos(self.heading) , self.s , self.ds , initial = 0.0)
+
         y_road = cumulative_trapezoid(np.sin(self.heading) , self.s , self.ds , initial = 0.0)
+
         return x_road , y_road
 
-    # def lane_centreline(self):
+    def lane_kappa_adjuster(self):
 
-    #     self.lane_centre = np.zer
+        kappa_lane = np.zeros((self.lane_num , np.size(self.s)) , dtype = np.float16)
+
+        x_lane = np.zeros((self.lane_num , ) , dtype = np.float16)
+
+        y_lane = np.zeros((self.lane_num , ) , dtype = np.float16)
+
+        for l in range(self.lane_num):
+
+            if l == 0:
+
+                kappa_lane[l , :] = 1 / (1 / self.kappa + self.l_w / 2)
+
+                x_lane[l] = self.l_w * np.sin(self.heading[0]) / 2
+
+                y_lane[l] = self.l_w * np.cos(self.heading[0]) / 2
+
+            else:
+
+                kappa_lane[l , :] = 1 / (1 / self.kappa + (l - 1) * self.l_w + self.l_w / 2)
+
+                x_lane[l] = self.l_w * np.sin(self.heading[0]) / 2 + (l - 1) * self.l_w * np.sin(self.heading[0])
+
+                y_lane[l] = self.l_w * np.cos(self.heading[0]) / 2 + (l - 1) * self.l_w * np.cos(self.heading[0])
+
+        return kappa_lane
