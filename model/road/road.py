@@ -2,6 +2,19 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 from dataclasses import dataclass
 
+@dataclass
+class Lane:
+    
+    lane_id : int
+    width   : float      | None = None
+    offset  : float      | None = None
+    x       : np.ndarray | None = None
+    y       : np.ndarray | None = None
+    s       : np.ndarray | None = None
+    heading : np.ndarray | None = None
+    kappa   : np.ndarray | None = None
+    mu      : np.ndarray | None = None
+
 class Road:
     "Clothoid Roal Class"
 
@@ -11,115 +24,106 @@ class Road:
                  s_max     = 500,
                  kappa_max = 0.02,
                  L_clothoid= 50,
-                 lane_num  = 3,
                  mu_road   = 1.0,
                  mu_patch  = 0.3,
-                 patch_location = 225.0):
+                 patch_location = 225.0,
+                 lane_num  = 3):
         
-        self.s_max     = s_max
-        self.kappa_max = kappa_max
-
+        self.s_max      = s_max
+        self.kappa_max  = kappa_max
         self.L_clothoid = L_clothoid
-        self.L_curve = 80 # constant
-        self.L_e = (s_max - self.L_clothoid * 2 - self.L_curve) / 2
-        self.L_1 = (s_max - self.L_clothoid * 2 - self.L_curve) / 2
-        self.sigma = self.kappa_max / self.L_clothoid
+        self.mu         = mu_road
+        self.mu_patch   = mu_patch
+        self.patch_location = patch_location
+        self.lane_num   = lane_num
 
         self.l_w = 4.0 # [m] lane width
-        self.lane_num = lane_num
-
+        
         self.ds    = 0.1
-        self.s     = np.arange(0 , s_max , self.ds , dtype = np.float16).reshape(1 , -1)
+        self.s     = np.arange(0 , s_max , self.ds)
 
-        self.mu    = mu_road * np.ones_like(self.s , dtype = np.float16)
-
-        self.centre_point = np.zeros((self.lane_num , ) , dtype = np.float16)
-        self.lanes = np.zeros((lane_num , np.size(self.s , axis = 1)) , dtype = np.float16) 
+        self.lanes = [Lane(lane_id = i) for i in range(self.lane_num)]
 
         self.calculate()
 
     def calculate(self):
 
-        self.kappa = self.kappa_calc()
+        self.length_calc()
 
-        self.heading_road = self.heading_calc(self.kappa)
-        self.kappa_lane, self.x_lane_centre, self.y_lane_centre = self.lane_kappa_adjuster(self.heading_road)
+        self.kappa_calc()
 
-        self.heading_lane = self.heading_calc(self.kappa_lane)
+        self.heading = self.heading_calc(self.kappa , self.s)
 
-        self.x_road , self.y_road = self.cartesean_calc(self.heading_road, 0 , 0)
-        self.x_lane , self.y_lane = self.cartesean_calc(self.heading_lane, self.x_lane_centre , self.y_lane_centre)
+        self.x, self.y = self.cartesean_calc(self.heading ,self.s , 0.0 , 0.0)
+
+        self.lane_calc()
+
+    def length_calc(self):
+
+        self.L_curve = 80 # constant
+        self.L_enter = (self.s_max - self.L_clothoid * 2 - self.L_curve) / 2
+        self.sigma   = self.kappa_max / self.L_clothoid
 
     def kappa_calc(self):
 
         "Building the curvature"
 
-        kappa = np.zeros_like(self.s , dtype = np.float16)
+        self.kappa = np.zeros_like(self.s)
 
         # kappa = 0
-        mask_1 = (self.s >= 0) & (self.s < self.L_1)
-        kappa[mask_1] = 0
+        mask_1 = (self.s >= 0) & (self.s < self.L_enter)
+        self.kappa[mask_1] = 0
 
         # kappa is evolving to kappa_max
-        mask_2 = (self.s >= self.L_1) & (self.s < self.L_1 + self.L_clothoid)
-        kappa[mask_2] = self.sigma * (self.s[mask_2] - self.L_1)
+        mask_2 = (self.s >= self.L_enter) & (self.s < self.L_enter + self.L_clothoid)
+        self.kappa[mask_2] = self.sigma * (self.s[mask_2] - self.L_enter)
 
         # kappa is equal to kappa_max
-        mask_3 = (self.s >= self.L_1 + self.L_clothoid) & (self.s < self.L_1 + self.L_clothoid + self.L_curve)
-        kappa[mask_3] = self.kappa_max
+        mask_3 = (self.s >= self.L_enter + self.L_clothoid) & (self.s < self.L_enter + self.L_clothoid + self.L_curve)
+        self.kappa[mask_3] = self.kappa_max
 
         # kappa is decreasing to zero 
-        mask_4 = (self.s >= self.L_1 + self.L_clothoid + self.L_curve) & (self.s < self.L_1 + self.L_clothoid + self.L_curve + self.L_clothoid)
-        kappa[mask_4] = self.kappa_max - self.sigma * (self.s[mask_4] - self.L_1 - self.L_clothoid - self.L_curve)
+        mask_4 = (self.s >= self.L_enter + self.L_clothoid + self.L_curve) & (self.s < self.L_enter + self.L_clothoid + self.L_curve + self.L_clothoid)
+        self.kappa[mask_4] = self.kappa_max - self.sigma * (self.s[mask_4] - self.L_enter - self.L_clothoid - self.L_curve)
 
         # kappa = 0
-        mask_5 = (self.s >= self.L_1 + self.L_clothoid + self.L_curve + self.L_clothoid) & (self.s <= self.s_max)
-        kappa[mask_5] = 0
-
-        return kappa
+        mask_5 = (self.s >= self.L_enter + self.L_clothoid + self.L_curve + self.L_clothoid) & (self.s <= self.s_max)
+        self.kappa[mask_5] = 0
     
-    def heading_calc(self, kappa):
+    def heading_calc(self , kappa , s):
 
         "Building the heading"
 
-        heading = cumulative_trapezoid(kappa , self.s , axis = 1 , initial = 0.0)
+        return cumulative_trapezoid(kappa , s , axis = -1 , initial = 0.0)
 
-        return heading
+    def cartesean_calc(self, heading , s , x_init, y_init):
 
-    def cartesean_calc(self, heading, x_init, y_init):
+        "Build Carteasian from Frenet-Serret"
 
-        # x = np.zeros_like(heading , dtype = np.float16)
-        # y = np.zeros_like(heading , dtype = np.float16)
-
-        x = cumulative_trapezoid(np.cos(heading) , self.s , axis = 1 , initial = x_init)
-        y = cumulative_trapezoid(np.sin(heading) , self.s , axis = 1 , initial = y_init)
+        x = cumulative_trapezoid(np.cos(heading) , s , axis = -1 , initial = x_init)
+        y = cumulative_trapezoid(np.sin(heading) , s , axis = -1 , initial = y_init)
 
         return x , y
 
-    def lane_kappa_adjuster(self , heading):
+    def lane_calc(self):
 
-        kappa_lane = np.zeros((self.lane_num , np.size(self.s)) , dtype = np.float16)
+        L_w = self.l_w * self.lane_num
 
-        x_lane = np.zeros((self.lane_num , ) , dtype = np.float16)
-
-        y_lane = np.zeros((self.lane_num , ) , dtype = np.float16)
+        offsets = np.linspace(- L_w / 2 , L_w / 2 , self.lane_num)
 
         for l in range(self.lane_num):
 
-            if l == 0:
+            self.lanes[l].width = self.l_w
 
-                kappa_lane[l , :] = 1 / (1 / self.kappa + self.l_w / 2)
+            self.lanes[l].offset= offsets[l]
 
-                x_lane[l] = self.l_w * np.sin(heading[0]) / 2
+            self.lanes[l].kappa = self.kappa / (1 - offsets[l] * self.kappa)
 
-                y_lane[l] = self.l_w * np.cos(heading[0]) / 2
+            self.lanes[l].s     = cumulative_trapezoid( 1 - offsets[l] * self.kappa , self.s , initial = 0.0)
 
-            else:
+            self.lanes[l].heading = self.heading
 
-                kappa_lane[l , :] = 1 / (1 / self.kappa + (l - 1) * self.l_w + self.l_w / 2)
+            x_init = offsets[l] * np.sin(self.lanes[l].heading[0]) # type: ignore
+            y_init = offsets[l] * np.cos(self.lanes[l].heading[0]) # type: ignore
 
-                x_lane[l] = self.l_w * np.sin(heading[0]) / 2 + (l - 1) * self.l_w * np.sin(heading[0])
-
-                y_lane[l] = self.l_w * np.cos(heading[0]) / 2 + (l - 1) * self.l_w * np.cos(heading[0])
-
-        return kappa_lane, x_lane, y_lane
+            self.lanes[l].x , self.lanes[l].y= self.cartesean_calc( self.lanes[l].heading , self.lanes[l].s, x_init, y_init)
