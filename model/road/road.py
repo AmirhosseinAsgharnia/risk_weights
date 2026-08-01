@@ -100,8 +100,8 @@ class Road:
 
         "Build Carteasian from Frenet-Serret"
 
-        x = cumulative_trapezoid(np.cos(heading) , s , axis = -1 , initial = x_init)
-        y = cumulative_trapezoid(np.sin(heading) , s , axis = -1 , initial = y_init)
+        x = x_init + cumulative_trapezoid(np.cos(heading) , s , axis = -1 , initial = 0.0)
+        y = y_init + cumulative_trapezoid(np.sin(heading) , s , axis = -1 , initial = 0.0)
 
         return x , y
 
@@ -109,7 +109,10 @@ class Road:
 
         L_w = self.l_w * self.lane_num
 
-        offsets = np.linspace(- L_w / 2 , L_w / 2 , self.lane_num)
+        if self.lane_num != 1:
+            offsets = np.linspace(- (L_w - 0.5 * L_w) / 2 , (L_w - 0.5 * L_w) / 2 , self.lane_num)
+        else:
+            offsets = np.array([0])
 
         for l in range(self.lane_num):
 
