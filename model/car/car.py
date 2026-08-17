@@ -46,13 +46,21 @@ class Car:
                  model=CarDynamics,
                  controller=None,
                  state: CarState | None = None,
-                 vehicle_params: VehicleParameters | None = None) -> None:
+                 vehicle_params: VehicleParameters | None = None,
+                 behaviour: int = 2) -> None:
+
+        assert behaviour in (1, 2, 3), f"behaviour must be 1 (conservative), 2 (moderate) or 3 (aggressive), got {behaviour}"
 
         self.car_id = car_id if car_id is not None else next(_id_counter)
         self.model = model
         self.controller = controller
         self.state = state if state is not None else CarState()
         self.vehicle_params = vehicle_params or VehicleParameters()
+        # Driving style: 1 = conservative, 2 = moderate, 3 = aggressive.
+        # Selects which IDM/far-near parameter preset this car drives with
+        # -- see low_level_controller.idm.IDM_PRESETS and
+        # low_level_controller.far_near.FAR_NEAR_PRESETS.
+        self.behaviour = behaviour
 
     def step(self, accel: float, delta: float, kappa: float, mu: float, dt: float) -> CarState:
         """Advance the dynamics state by dt under the commanded (accel,

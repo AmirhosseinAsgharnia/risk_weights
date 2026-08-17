@@ -105,6 +105,42 @@ class Road:
 
         return x , y
 
+    def index_at(self, s: float) -> int:
+        """Nearest sample index into self.s -- and into every per-index
+        array aligned with it (self.kappa, self.heading, each Lane's own
+        .kappa/.heading, which are built on this same index, not on the
+        lane's own re-parameterized .s) -- for an arbitrary arclength s."""
+        idx = int(round(s / self.ds))
+        return min(max(idx, 0), len(self.s) - 1)
+
+    def frenet_to_global(self, s: float, e_y: float, e_psi: float = 0.0) -> tuple[float, float, float]:
+        """Global (x, y, heading) of a point at arclength s, offset e_y from
+        the road's own backbone (offset-0) curve.
+
+        Sign conventions -- these are SAE J670 (+right), matching CarState/
+        CarDynamics, NOT Lane.offset's own "+left" convention (offsets used
+        by lane_calc's x_init/y_init only coincide with this at heading=0,
+        where it seeds the arc-length-correct integration that actually
+        traces out each lane; that formula isn't a general perpendicular
+        for heading != 0). Callers combining a Lane.offset with an e_y here
+        must negate the offset first.
+
+          e_y:  the perpendicular unit vector for a SAE "+right" offset, at
+                heading psi, is (sin(psi), -cos(psi)) -- verified
+                perpendicular to the tangent (cos(psi), sin(psi)) for every
+                psi (dot product 0), unlike (sin(psi), cos(psi)) which is
+                only perpendicular at psi = 0.
+          e_psi: CarDynamics' own e_psi state accumulates as
+                psi_vehicle - psi_path, positive = clockwise (SAE) --
+                opposite of psi's counter-clockwise-positive (cos, sin)
+                convention here, hence the minus sign below.
+        """
+        idx = self.index_at(s)
+        psi = self.heading[idx]
+        x = self.x[idx] + e_y * np.sin(psi)
+        y = self.y[idx] - e_y * np.cos(psi)
+        return x, y, psi - e_psi
+
     def lane_calc(self):
 
         L_w = self.l_w * self.lane_num

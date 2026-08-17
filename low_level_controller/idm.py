@@ -6,6 +6,7 @@ MPC, designed later).
 """
 
 import math
+from typing import NamedTuple
 
 
 def idm_accel(v: float, gap: float, dv: float,
@@ -44,3 +45,21 @@ def idm_accel(v: float, gap: float, dv: float,
     gap = max(gap, gap_floor)
     s_star = s0 + max(0.0, v * T + (v * dv) / (2.0 * math.sqrt(a_max * b)))
     return a_max * (1.0 - (v / v0) ** delta - (s_star / gap) ** 2)
+
+
+class IDMBehaviorParams(NamedTuple):
+    """IDM tuning for one driving style. Deliberately excludes v0 (desired
+    speed) -- unlike the other fields here, that's drawn per-car, not
+    fixed by behaviour (see initialization.traffic_init)."""
+    T: float       # [s] desired time headway
+    s0: float      # [m] minimum (jam) gap
+    a_max: float   # [m/s^2] max acceleration
+    b: float       # [m/s^2] comfortable deceleration
+    delta: float = 4.0   # [-] free-road acceleration exponent
+
+
+IDM_PRESETS: dict[int, IDMBehaviorParams] = {
+    1: IDMBehaviorParams(T=2.0, s0=3.0, a_max=0.8, b=1.3),   # conservative
+    2: IDMBehaviorParams(T=1.4, s0=2.0, a_max=1.5, b=2.0),   # moderate
+    3: IDMBehaviorParams(T=0.8, s0=1.0, a_max=2.5, b=3.0),   # aggressive
+}
