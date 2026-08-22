@@ -13,28 +13,21 @@ class Lane:
     s       : np.ndarray | None = None
     heading : np.ndarray | None = None
     kappa   : np.ndarray | None = None
-    mu      : np.ndarray | None = None
 
 class Road:
     "Clothoid Roal Class"
-
-    L_patch = 80.0 # [m] friction patch length, fixed
 
     def __init__(self,
                  s_max     = 500,
                  kappa_max = 0.02,
                  L_clothoid= 50,
-                 mu_road   = 1.0,
-                 mu_patch  = 0.3,
-                 patch_location = 225.0,
+                 mu        = 1.0,
                  lane_num  = 3):
-        
+
         self.s_max      = s_max
         self.kappa_max  = kappa_max
         self.L_clothoid = L_clothoid
-        self.mu         = mu_road
-        self.mu_patch   = mu_patch
-        self.patch_location = patch_location
+        self.mu         = mu
         self.lane_num   = lane_num
 
         self.l_w = 4.0 # [m] lane width

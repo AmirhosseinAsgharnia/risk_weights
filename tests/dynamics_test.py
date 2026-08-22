@@ -35,7 +35,7 @@ car_length = 4.0   # [m]
 car_width  = 2.0   # [m]
 
 road = Road(s_max = 500, kappa_max = 0.000, L_clothoid = 60,
-            mu_road = 1.0, mu_patch = 0.5, patch_location = 225, lane_num = lane_num)
+            mu = 1.0, lane_num = lane_num)
 
 car = Car(state = CarState(s = 0.0, e_y = 0.0, e_psi = 0.0, v_x = v0, lane = start_lane),
           vehicle_params = VehicleParameters())

@@ -16,6 +16,12 @@ from low_level_controller.idm import idm_accel, IDM_PRESETS
 CAR_LENGTH = 4.0   # [m] used for bumper-to-bumper gap, matching the body
                     # rectangle tests/dynamics_test.py draws cars with.
 
+SPEED_RANGES: dict[int, tuple[float, float]] = {   # [m/s] desired-speed range per behaviour
+    1: (15.0, 20.0),   # conservative
+    2: (17.5, 22.5),   # moderate
+    3: (20.0, 25.0),   # aggressive
+}
+
 
 @dataclass
 class TrafficAgent:
@@ -67,7 +73,7 @@ def generate_traffic(
         ego_s: float = 50.0,
         d_range: tuple[float, float] = (-40.0, 40.0),
         lanes: tuple[int, ...] = (0, 1, 2),
-        speed_range: tuple[float, float] = (15.0, 25.0),
+        speed_ranges: dict[int, tuple[float, float]] = SPEED_RANGES,
         behaviours: tuple[int, ...] = (1, 2, 3),
         min_gap: float = 6.0,
         max_place_attempts: int = 200,
@@ -81,8 +87,10 @@ def generate_traffic(
     min_gap of an already-placed car in the same lane -- unconstrained
     i.i.d. placement can otherwise spawn two cars overlapping, which sends
     IDM's (s_star/gap)^2 term toward infinity and blows up the first
-    integration step), desired speed v0 ~ U(speed_range), and behaviour ~
-    choice(behaviours) (selecting its IDM_PRESETS/FAR_NEAR_PRESETS entry).
+    integration step), behaviour ~ choice(behaviours) (selecting its
+    IDM_PRESETS/FAR_NEAR_PRESETS entry), and desired speed v0 ~
+    U(speed_ranges[behaviour]) -- conservative/moderate/aggressive draw
+    from their own (narrower, and offset) range rather than sharing one.
 
     Initial speeds are each car's IDM *steady-state* speed for the gap it
     landed in: within each lane, cars are resolved front-to-back (largest
@@ -103,8 +111,8 @@ def generate_traffic(
             if all(abs(s_candidate - s) >= min_gap for s in s_taken_by_lane[lane]):
                 break
         s_taken_by_lane[lane].append(s_candidate)
-        v0 = float(rng.uniform(*speed_range))
         behaviour = int(rng.choice(behaviours))
+        v0 = float(rng.uniform(*speed_ranges[behaviour]))
 
         state = CarState(s=s_candidate, e_y=0.0, e_psi=0.0, v_x=v0, lane=lane)
         car = Car(state=state, vehicle_params=VehicleParameters(), behaviour=behaviour)

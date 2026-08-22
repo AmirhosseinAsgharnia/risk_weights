@@ -14,6 +14,8 @@ from initialization.traffic_init import generate_traffic, CAR_LENGTH
 
 # ── Options ───────────────────────────────────────────────────────────────
 mode = "animation"   # "plot" (static figure) or "animation" (traffic driving live)
+seed = None   # RNG seed for traffic generation -- None draws a fresh scenario
+              # every run; set an int (e.g. 0) to reproduce the same one.
 
 # ── Scenario ──────────────────────────────────────────────────────────────
 N_c   = 15     # number of surrounding cars
@@ -32,10 +34,10 @@ car_width = 2.0   # [m] (CAR_LENGTH comes from initialization.traffic_init, shar
 
 _BEHAVIOUR_COLOR = {1: "seagreen", 2: "steelblue", 3: "firebrick"}   # conservative/moderate/aggressive
 
-road = Road(s_max = 500, kappa_max = 0.000, L_clothoid = 60,
-            mu_road = 1.0, mu_patch = 0.5, patch_location = 225, lane_num = lane_num)
+road = Road(s_max = 500, kappa_max = 0.005, L_clothoid = 60,
+            mu = 1.0, lane_num = lane_num)
 
-rng = np.random.default_rng(0)
+rng = np.random.default_rng(seed)
 agents = generate_traffic(N_c, ego_s = ego_s, lanes = tuple(range(lane_num)), rng = rng)
 
 
@@ -57,6 +59,7 @@ def car_corners(x: float, y: float, heading: float, length: float = CAR_LENGTH, 
 # its old lane's stream for other cars' purposes until it commits) ─────────
 
 def find_leader(agents, lane, s, exclude_id):
+    # This module finds the leader.
     ahead = [a for a in agents if a.car.state.lane == lane and a.car.car_id != exclude_id and a.car.state.s > s]
     return min(ahead, key = lambda a: a.car.state.s) if ahead else None
 

@@ -4,7 +4,7 @@ from model.road.road import Road
 
 lane_num = 3
 
-road = Road(s_max = 500, kappa_max = 0.001 , L_clothoid = 100 , lane_num = lane_num , mu_road = 1.0 , mu_patch = 0.3 , patch_location = 225)
+road = Road(s_max = 500, kappa_max = 0.001 , L_clothoid = 100 , lane_num = lane_num , mu = 1.0)
 
 fig, axe = plt.subplots(1 , 2, figsize = (10 , 5))
 
