@@ -117,6 +117,12 @@ def generate_traffic(
         for _ in range(max_place_attempts):
             d = float(rng.uniform(*d_range))
             s_candidate = ego_s + d
+            # Also keep clear of ego_s itself (in whichever lane ego ends up
+            # in -- this doesn't know that, so it's enforced in all lanes):
+            # a caller placing a real ego vehicle there needs it not to
+            # spawn already overlapping a surr car.
+            if abs(d) < min_gap:
+                continue
             if all(abs(s_candidate - s) >= min_gap for s in s_taken_by_lane[lane]):
                 break
         s_taken_by_lane[lane].append(s_candidate)
