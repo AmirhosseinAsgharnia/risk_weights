@@ -5,12 +5,12 @@ from matplotlib.patches import Polygon
 from matplotlib.animation import FuncAnimation
 
 from model.road.road import Road
-from low_level_controller.idm import idm_accel, IDM_PRESETS
-from low_level_controller.far_near import (
+from controllers.idm import idm_accel, IDM_PRESETS
+from controllers.far_near import (
     far_near_steering, far_near_lookahead_offset, clip_steering_rate,
     far_near_curvature_feedforward, FAR_NEAR_PRESETS,
 )
-from low_level_controller.mobil import mobil_decision, MobilParams
+from controllers.mobil import mobil_decision, MobilParams
 from initialization.traffic_init import generate_traffic, CAR_LENGTH, CAR_WIDTH
 from model.collision import resolve_surr_collisions, bleed_crashed
 from model.car.car import Car, CarState

@@ -7,8 +7,8 @@ from matplotlib.animation import FuncAnimation
 from model.road.road import Road
 from model.car.config import VehicleParameters
 from model.car.car import Car, CarState
-from low_level_controller.far_near import far_near_steering, far_near_lookahead_offset
-from low_level_controller.idm import idm_accel
+from controllers.far_near import far_near_steering, far_near_lookahead_offset
+from controllers.idm import idm_accel
 
 # ── Options ───────────────────────────────────────────────────────────────
 mode = "animation"   # "plot" (static figure) or "animation" (car driving live)

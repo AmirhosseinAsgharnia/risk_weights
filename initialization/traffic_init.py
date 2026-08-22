@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from model.car.car import Car, CarState
 from model.car.config import VehicleParameters
-from low_level_controller.idm import idm_accel, IDM_PRESETS
+from controllers.idm import idm_accel, IDM_PRESETS
 
 CAR_LENGTH = 4.0   # [m] used for bumper-to-bumper gap, matching the body
                     # rectangle tests/dynamics_test.py draws cars with.

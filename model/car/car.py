@@ -58,8 +58,8 @@ class Car:
         self.vehicle_params = vehicle_params or VehicleParameters()
         # Driving style: 1 = conservative, 2 = moderate, 3 = aggressive.
         # Selects which IDM/far-near parameter preset this car drives with
-        # -- see low_level_controller.idm.IDM_PRESETS and
-        # low_level_controller.far_near.FAR_NEAR_PRESETS.
+        # -- see controllers.idm.IDM_PRESETS and
+        # controllers.far_near.FAR_NEAR_PRESETS.
         self.behaviour = behaviour
 
     def step(self, accel: float, delta: float, kappa: float, mu: float, dt: float) -> CarState:
