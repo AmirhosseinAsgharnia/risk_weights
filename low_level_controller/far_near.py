@@ -73,6 +73,29 @@ def far_near_steering(e_y_near: float, e_y_far: float, v: float,
             - k_far * math.atan(e_y_far / (v + eps)))
 
 
+def far_near_curvature_feedforward(kappa: float, wheelbase: float) -> float:
+    """
+    Kinematic (Ackermann) steering feedforward for the reference path's
+    curvature: delta_ff = atan(kappa * wheelbase).
+
+    far_near_steering above is pure feedback -- it only reacts to e_y/e_psi
+    error that has *already* appeared, so on a curve it structurally lags:
+    e_psi only starts drifting once the path curves (CarDynamics' e_psi_dot
+    = r - kappa*s_dot), and only then does the far term react. Evaluating
+    kappa here at a preview point ahead of the car (e.g. the far lookahead
+    distance used for e_y_far) rather than at the car's current position
+    lets delta start ramping up before the car geometrically reaches the
+    curve, substantially cutting the entry-transient lane departure a
+    pure-feedback controller otherwise shows on a clothoid.
+
+    Uses the same sign convention as the kappa passed into Car.step (i.e.
+    already flipped from the road/Lane's own kappa array -- see the SAE-
+    vs-road heading convention note in Road.frenet_to_global) -- pass that
+    same value in.
+    """
+    return math.atan(kappa * wheelbase)
+
+
 def clip_steering_rate(delta_cmd: float, prev_delta: float, rate_limit: float, dt: float) -> float:
     """
     Limit how far delta_cmd can move from prev_delta in one step of size dt,
@@ -107,7 +130,16 @@ class FarNearBehaviorParams(NamedTuple):
 
 
 FAR_NEAR_PRESETS: dict[int, FarNearBehaviorParams] = {
-    1: FarNearBehaviorParams(L_n=11.0, T_f=1.8, k_n=0.6, k_f=1.3, steer_rate_limit=0.30, lane_change_duration=5.5),  # conservative
-    2: FarNearBehaviorParams(L_n=8.0,  T_f=1.3, k_n=0.9, k_f=1.1, steer_rate_limit=0.45, lane_change_duration=4.0),  # moderate
-    3: FarNearBehaviorParams(L_n=5.0,  T_f=0.8, k_n=1.2, k_f=0.9, steer_rate_limit=0.70, lane_change_duration=2.5),  # aggressive
+    # Retuned against tests/traffic_test.py's clothoid curve (kappa_max=0.005,
+    # L_clothoid=60) together with far_near_curvature_feedforward: a grid
+    # search over each behaviour's own desired-speed range (see
+    # initialization.traffic_init.SPEED_RANGES) found L_n/T_f/k_n/k_f
+    # converging to the same point for all three behaviours before hitting
+    # closed-loop instability -- steer_rate_limit (still ordered
+    # conservative < moderate < aggressive) is what's left to differentiate
+    # reaction speed. Cut peak lane-departure on the curve from ~1.4-2.1 m
+    # to ~0.9-1.8 m across the three behaviours.
+    1: FarNearBehaviorParams(L_n=5.0, T_f=1.0, k_n=2.5, k_f=2.5, steer_rate_limit=0.6, lane_change_duration=5.5),  # conservative
+    2: FarNearBehaviorParams(L_n=5.0, T_f=1.0, k_n=2.5, k_f=2.5, steer_rate_limit=0.8, lane_change_duration=4.0),  # moderate
+    3: FarNearBehaviorParams(L_n=5.0, T_f=1.0, k_n=2.5, k_f=2.5, steer_rate_limit=1.0, lane_change_duration=2.5),  # aggressive
 }

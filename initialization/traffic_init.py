@@ -15,6 +15,8 @@ from low_level_controller.idm import idm_accel, IDM_PRESETS
 
 CAR_LENGTH = 4.0   # [m] used for bumper-to-bumper gap, matching the body
                     # rectangle tests/dynamics_test.py draws cars with.
+CAR_WIDTH  = 2.0    # [m] shared with tests/traffic_test.py's plotted body
+                    # width and model.collision's overlap test.
 
 SPEED_RANGES: dict[int, tuple[float, float]] = {   # [m/s] desired-speed range per behaviour
     1: (15.0, 20.0),   # conservative
@@ -28,12 +30,19 @@ class TrafficAgent:
     """A traffic car plus the scenario-level bookkeeping Car/CarState don't
     own themselves (v0 is a per-car IDM preference, not a behaviour-fixed
     constant -- see IDM_PRESETS; target_lane/lane_change_t0/prev_delta are
-    MOBIL/far-near runtime state, not general vehicle-dynamics state)."""
+    MOBIL/far-near runtime state, not general vehicle-dynamics state;
+    crashed/crash_t/crash_v are set by model.collision once this car has
+    been in a plastic collision -- see that module for what CRASHED means
+    and why v0 keeps its pre-crash value rather than being cleared)."""
     car: Car
     v0: float                              # [m/s] this car's own IDM desired speed
     target_lane: int                       # lane it's heading for; == car.state.lane when not changing
     lane_change_t0: float | None = None    # sim time the active lane change started; None if not changing
     prev_delta: float = 0.0                # for clip_steering_rate
+    last_lane_change_t: float | None = None   # sim time the last lane change committed; None if never
+    crashed: bool = False                  # once True, permanent: skip IDM/MOBIL, passive obstacle
+    crash_t: float | None = None           # [s] sim time this car crashed; None if not crashed
+    crash_v: float | None = None           # [m/s] momentum-conserved speed at the moment of its crash
 
 
 def steady_state_speed(v0: float, gap: float, v_leader: float, idm_params,

@@ -7,14 +7,18 @@ from matplotlib.animation import FuncAnimation
 from model.road.road import Road
 from low_level_controller.idm import idm_accel, IDM_PRESETS
 from low_level_controller.far_near import (
-    far_near_steering, far_near_lookahead_offset, clip_steering_rate, FAR_NEAR_PRESETS,
+    far_near_steering, far_near_lookahead_offset, clip_steering_rate,
+    far_near_curvature_feedforward, FAR_NEAR_PRESETS,
 )
 from low_level_controller.mobil import mobil_decision, MobilParams
-from initialization.traffic_init import generate_traffic, CAR_LENGTH
+from initialization.traffic_init import generate_traffic, CAR_LENGTH, CAR_WIDTH
+from model.collision import resolve_surr_collisions, bleed_crashed
+from model.car.car import Car, CarState
+from model.car.config import VehicleParameters
 
 # ── Options ───────────────────────────────────────────────────────────────
 mode = "animation"   # "plot" (static figure) or "animation" (traffic driving live)
-seed = None   # RNG seed for traffic generation -- None draws a fresh scenario
+seed = 2   # RNG seed for traffic generation -- None draws a fresh scenario
               # every run; set an int (e.g. 0) to reproduce the same one.
 
 # ── Scenario ──────────────────────────────────────────────────────────────
@@ -28,17 +32,40 @@ duration = 20.0   # [s]
 
 mobil_params = MobilParams()   # standard defaults: politeness=0.2, threshold=0.2, b_safe=4.0
 MAX_BRAKING = 8.0   # [m/s^2] physical actuation limit clamped onto IDM's raw output
+LANE_CHANGE_COOLDOWN = 1.0   # [s] a car may not start another lane change this
+                             # soon after its last one committed -- damps MOBIL
+                             # lane-hopping back and forth right after a merge.
+CRASH_BLEED_K = 1.0   # [-] post-crash deceleration = k * road.mu * g -- see model.collision
 
-car_width = 2.0   # [m] (CAR_LENGTH comes from initialization.traffic_init, shared
-                  # with the gap calculations there so plotted bodies match spacing)
+car_width = CAR_WIDTH   # [m] (CAR_LENGTH/CAR_WIDTH come from initialization.traffic_init,
+                        # shared with the gap calculations and collision test so plotted
+                        # bodies match spacing)
 
 _BEHAVIOUR_COLOR = {1: "seagreen", 2: "steelblue", 3: "firebrick"}   # conservative/moderate/aggressive
+_CRASHED_COLOR = "dimgray"
+
+
+def _agent_color(agent) -> str:
+    return _CRASHED_COLOR if agent.crashed else _BEHAVIOUR_COLOR[agent.car.behaviour]
 
 road = Road(s_max = 500, kappa_max = 0.005, L_clothoid = 60,
             mu = 1.0, lane_num = lane_num)
 
 rng = np.random.default_rng(seed)
 agents = generate_traffic(N_c, ego_s = ego_s, lanes = tuple(range(lane_num)), rng = rng)
+
+# ── Ego -- stationary placeholder, no controller yet: it never steps, so
+# its (x, y, heading) are computed once here rather than every frame. Not
+# a TrafficAgent -- it doesn't run IDM/MOBIL and isn't in `agents`, so it's
+# not yet visible to surr cars' leader lookups or collision detection.
+EGO_COLOR = "black"
+ego_lane = lane_num // 2
+ego_car = Car(state = CarState(s = ego_s, e_y = 0.0, e_psi = 0.0, v_x = 0.0, lane = ego_lane),
+              vehicle_params = VehicleParameters())
+_ego_lane_obj = road.lanes[ego_car.state.lane]
+_ego_backbone_e_y = -_ego_lane_obj.offset + ego_car.state.e_y   # type: ignore
+ego_x, ego_y, ego_heading = road.frenet_to_global(ego_car.state.s, _ego_backbone_e_y, ego_car.state.e_psi)
+ego_car.state.x, ego_car.state.y = ego_x, ego_y
 
 
 def car_corners(x: float, y: float, heading: float, length: float = CAR_LENGTH, width: float = car_width):
@@ -118,7 +145,12 @@ def evaluate_mobil(agents, agent, candidate_lane):
 
 
 # ── Simulate ──────────────────────────────────────────────────────────────
-history = {agent.car.car_id: {"t": [], "x": [], "y": [], "heading": []} for agent in agents}
+# EGO RULE (not yet reachable here): an ego/surr overlap must end the episode
+# via model.collision.ego_overlaps_any, never route through
+# resolve_surr_collisions -- see that function's docstring. This script has
+# no ego vehicle instantiated (ego_s above is only a reference point), so
+# there's nothing for that hook to check yet; wire it in once one exists.
+history = {agent.car.car_id: {"t": [], "x": [], "y": [], "heading": [], "crashed": []} for agent in agents}
 
 n_steps = int(duration / dt)
 for step in range(n_steps):
@@ -127,66 +159,87 @@ for step in range(n_steps):
     for agent in agents:
         car = agent.car
 
-        # 1. MOBIL: only consider a new lane change once any active one has committed.
-        if agent.lane_change_t0 is None:
-            best_lane, best_incentive = None, mobil_params.threshold
-            for candidate in (car.state.lane - 1, car.state.lane + 1):
-                if not (0 <= candidate < lane_num):
-                    continue
-                should_change, incentive = evaluate_mobil(agents, agent, candidate)
-                if should_change and incentive > best_incentive:
-                    best_lane, best_incentive = candidate, incentive
-            if best_lane is not None:
-                agent.target_lane = best_lane
-                agent.lane_change_t0 = t
-
-        # 2. IDM: follow the target lane's leader (ego commits to the new
-        # lane's traffic stream as soon as a change starts, not just once
-        # it completes).
-        idm_p = IDM_PRESETS[car.behaviour]
-        leader = find_leader(agents, agent.target_lane, car.state.s, car.car_id)
-        accel = _idm_accel_of(car.state, agent.v0, idm_p, leader)
-        # idm_accel is deliberately unclamped (see its own docstring) -- a
-        # near-zero gap sends (s_star/gap)^2, and so accel, toward -inf.
-        # Physical actuation limit, not part of the IDM formula itself.
-        accel = max(accel, -MAX_BRAKING)
-
-        # 3. Far-near steering, target ramped from the old lane's centreline
-        # to the new one over this car's lane_change_duration.
-        fn_p = FAR_NEAR_PRESETS[car.behaviour]
-        if agent.lane_change_t0 is not None:
-            old_lane_obj = road.lanes[car.state.lane]
-            new_lane_obj = road.lanes[agent.target_lane]
-            full_shift = old_lane_obj.offset - new_lane_obj.offset   # type: ignore
-            progress = min(1.0, (t - agent.lane_change_t0) / fn_p.lane_change_duration)
-            e_y_ref = car.state.e_y - progress * full_shift
+        if agent.crashed:
+            # Passive obstacle: no IDM, no MOBIL, no steering -- just bleed
+            # off the momentum from its crash (see model.collision).
+            bleed_crashed(agent, road, dt, k = CRASH_BLEED_K)
         else:
-            e_y_ref = car.state.e_y
+            # 1. MOBIL: only consider a new lane change once any active one has
+            # committed, and not within LANE_CHANGE_COOLDOWN of the last one.
+            on_cooldown = (agent.last_lane_change_t is not None
+                           and (t - agent.last_lane_change_t) < LANE_CHANGE_COOLDOWN)
+            if agent.lane_change_t0 is None and not on_cooldown:
+                best_lane, best_incentive = None, mobil_params.threshold
+                for candidate in (car.state.lane - 1, car.state.lane + 1):
+                    if not (0 <= candidate < lane_num):
+                        continue
+                    should_change, incentive = evaluate_mobil(agents, agent, candidate)
+                    if should_change and incentive > best_incentive:
+                        best_lane, best_incentive = candidate, incentive
+                if best_lane is not None:
+                    agent.target_lane = best_lane
+                    agent.lane_change_t0 = t
 
-        e_y_near = far_near_lookahead_offset(e_y_ref, car.state.e_psi, fn_p.L_n)
-        d_far    = car.state.v_x * fn_p.T_f
-        e_y_far  = far_near_lookahead_offset(e_y_ref, car.state.e_psi, d_far)
-        delta_cmd = far_near_steering(e_y_near, e_y_far, car.state.v_x, fn_p.k_n, fn_p.k_f)
-        delta = clip_steering_rate(delta_cmd, agent.prev_delta, fn_p.steer_rate_limit, dt)
-        agent.prev_delta = delta
+            # 2. IDM: follow the target lane's leader (ego commits to the new
+            # lane's traffic stream as soon as a change starts, not just once
+            # it completes). find_leader doesn't filter by crashed status, so
+            # a stopped wreck is automatically a valid leader here, with
+            # whatever v_x it currently has (0 once it's finished bleeding).
+            idm_p = IDM_PRESETS[car.behaviour]
+            leader = find_leader(agents, agent.target_lane, car.state.s, car.car_id)
+            accel = _idm_accel_of(car.state, agent.v0, idm_p, leader)
+            # idm_accel is deliberately unclamped (see its own docstring) -- a
+            # near-zero gap sends (s_star/gap)^2, and so accel, toward -inf.
+            # Physical actuation limit, not part of the IDM formula itself.
+            accel = max(accel, -MAX_BRAKING)
 
-        # 4. Road curvature/friction at this car's current position, using
-        # its nominal (not target) lane, matching the leader lookups above.
-        idx = road.index_at(car.state.s)
-        kappa = -road.lanes[car.state.lane].kappa[idx]  # type: ignore
-        mu = road.mu
+            # 3. Far-near steering, target ramped from the old lane's centreline
+            # to the new one over this car's lane_change_duration.
+            fn_p = FAR_NEAR_PRESETS[car.behaviour]
+            if agent.lane_change_t0 is not None:
+                old_lane_obj = road.lanes[car.state.lane]
+                new_lane_obj = road.lanes[agent.target_lane]
+                full_shift = old_lane_obj.offset - new_lane_obj.offset   # type: ignore
+                progress = min(1.0, (t - agent.lane_change_t0) / fn_p.lane_change_duration)
+                e_y_ref = car.state.e_y - progress * full_shift
+            else:
+                e_y_ref = car.state.e_y
 
-        car.step(accel, delta, kappa, mu, dt)
+            e_y_near = far_near_lookahead_offset(e_y_ref, car.state.e_psi, fn_p.L_n)
+            d_far    = car.state.v_x * fn_p.T_f
+            e_y_far  = far_near_lookahead_offset(e_y_ref, car.state.e_psi, d_far)
+            delta_cmd = far_near_steering(e_y_near, e_y_far, car.state.v_x, fn_p.k_n, fn_p.k_f)
 
-        # 5. Commit the lane change once its duration has elapsed.
-        if agent.lane_change_t0 is not None and (t - agent.lane_change_t0) >= fn_p.lane_change_duration:
-            old_lane_obj = road.lanes[car.state.lane]
-            new_lane_obj = road.lanes[agent.target_lane]
-            car.state.e_y = car.state.e_y + (new_lane_obj.offset - old_lane_obj.offset)  # type: ignore
-            car.state.lane = agent.target_lane
-            agent.lane_change_t0 = None
+            # Curvature-preview feedforward: look up the road's curvature at
+            # the far lookahead point (not the car's current s) so delta
+            # starts ramping toward what the upcoming curve needs before the
+            # car geometrically reaches it -- pure e_y/e_psi feedback always
+            # reacts after the fact (see far_near_curvature_feedforward).
+            idx_preview = road.index_at(car.state.s + d_far)
+            kappa_preview = -road.lanes[car.state.lane].kappa[idx_preview]  # type: ignore
+            delta_cmd += far_near_curvature_feedforward(kappa_preview, car.vehicle_params.L)
 
-        # 6. Global position for plotting.
+            delta = clip_steering_rate(delta_cmd, agent.prev_delta, fn_p.steer_rate_limit, dt)
+            agent.prev_delta = delta
+
+            # 4. Road curvature/friction at this car's current position, using
+            # its nominal (not target) lane, matching the leader lookups above.
+            idx = road.index_at(car.state.s)
+            kappa = -road.lanes[car.state.lane].kappa[idx]  # type: ignore
+            mu = road.mu
+
+            car.step(accel, delta, kappa, mu, dt)
+
+            # 5. Commit the lane change once its duration has elapsed.
+            if agent.lane_change_t0 is not None and (t - agent.lane_change_t0) >= fn_p.lane_change_duration:
+                old_lane_obj = road.lanes[car.state.lane]
+                new_lane_obj = road.lanes[agent.target_lane]
+                car.state.e_y = car.state.e_y + (new_lane_obj.offset - old_lane_obj.offset)  # type: ignore
+                car.state.lane = agent.target_lane
+                agent.lane_change_t0 = None
+                agent.last_lane_change_t = t
+
+        # 6. Global position for plotting (common to both branches).
         lane_obj = road.lanes[car.state.lane]
         backbone_e_y = -lane_obj.offset + car.state.e_y  # type: ignore
         x, y, heading = road.frenet_to_global(car.state.s, backbone_e_y, car.state.e_psi)
@@ -197,6 +250,11 @@ for step in range(n_steps):
         h["x"].append(x)
         h["y"].append(y)
         h["heading"].append(heading)
+        h["crashed"].append(agent.crashed)
+
+    # 7. Surr-surr collision detection + plastic response, once per step
+    # after everyone (crashed or not) has moved -- see model.collision.
+    resolve_surr_collisions(agents, road, t)
 
 # ── Figure: road + all cars ─────────────────────────────────────────────────
 fig, ax = plt.subplots(figsize = (18, 4))
@@ -224,12 +282,17 @@ s_vals = [agent.car.state.s for agent in agents]
 ax.set_xlim(0, 500)
 ax.set_ylim(-15, 15)
 ax.set_aspect('equal')
-ax.set_title(f"Traffic ({N_c} cars, no ego) -- green=conservative, blue=moderate, red=aggressive")
+ax.set_title(f"Traffic ({N_c} cars + stationary ego) -- green=conservative, blue=moderate, "
+             f"red=aggressive, {_CRASHED_COLOR}=crashed, {EGO_COLOR}=ego")
+
+ego_patch = Polygon(car_corners(ego_x, ego_y, ego_heading), closed = True,
+                     facecolor = EGO_COLOR, edgecolor = "black", zorder = 7)
+ax.add_patch(ego_patch)
 
 if mode == "plot":
     for agent in agents:
         h = history[agent.car.car_id]
-        color = _BEHAVIOUR_COLOR[agent.car.behaviour]
+        color = _agent_color(agent)
         ax.plot(h["x"], h["y"], color = color, linewidth = 1.0, alpha = 0.5, zorder = 5)
         corners = car_corners(h["x"][-1], h["y"][-1], h["heading"][-1])
         ax.add_patch(Polygon(corners, closed = True, facecolor = color,
@@ -241,7 +304,7 @@ elif mode == "animation":
     patches = {}
     for agent in agents:
         h = history[agent.car.car_id]
-        color = _BEHAVIOUR_COLOR[agent.car.behaviour]
+        color = _CRASHED_COLOR if h["crashed"][0] else _BEHAVIOUR_COLOR[agent.car.behaviour]
         patch = Polygon(car_corners(h["x"][0], h["y"][0], h["heading"][0]),
                          closed = True, facecolor = color, edgecolor = "black", zorder = 6)
         ax.add_patch(patch)
@@ -251,6 +314,8 @@ elif mode == "animation":
         for agent in agents:
             h = history[agent.car.car_id]
             patches[agent.car.car_id].set_xy(car_corners(h["x"][i], h["y"][i], h["heading"][i]))
+            crashed_color = _CRASHED_COLOR if h["crashed"][i] else _BEHAVIOUR_COLOR[agent.car.behaviour]
+            patches[agent.car.car_id].set_facecolor(crashed_color)
         return list(patches.values())
 
     ani = FuncAnimation(fig, update, frames = n_steps, interval = dt * 1000, blit = False)
