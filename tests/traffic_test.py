@@ -47,7 +47,11 @@ road = Road(s_max = 500, kappa_max = 0.005, L_clothoid = 60,
             mu = 1.0, lane_num = lane_num)
 
 rng = np.random.default_rng(seed)
-agents = generate_traffic(N_c, ego_s = ego_s, lanes = tuple(range(lane_num)), rng = rng)
+# ego_v0 is drawn by generate_traffic exactly like a surr car's v0 (ego is
+# placed/spaced like a vehicle there too) -- used below for ego_car's
+# initial v_x, even though this script's ego still has no controller (see
+# next comment) and so never actually moves regardless of its v_x.
+agents, ego_v0 = generate_traffic(N_c, ego_s = ego_s, lanes = tuple(range(lane_num)), rng = rng)
 
 # ── Ego -- stationary placeholder, no controller yet: it never steps, so
 # its (x, y, heading) are computed once here rather than every frame. Not
@@ -55,7 +59,7 @@ agents = generate_traffic(N_c, ego_s = ego_s, lanes = tuple(range(lane_num)), rn
 # not yet visible to surr cars' leader lookups or collision detection.
 EGO_COLOR = "black"
 ego_lane = lane_num // 2
-ego_car = Car(state = CarState(s = ego_s, e_y = 0.0, e_psi = 0.0, v_x = 0.0, lane = ego_lane),
+ego_car = Car(state = CarState(s = ego_s, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
               vehicle_params = VehicleParameters())
 _ego_lane_obj = road.lanes[ego_car.state.lane]
 _ego_backbone_e_y = -_ego_lane_obj.offset + ego_car.state.e_y   # type: ignore

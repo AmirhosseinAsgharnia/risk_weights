@@ -84,12 +84,21 @@ class EgoTrafficEnv(gym.Env):
 
     metadata = {"render_modes": []}
 
-    def __init__(self):
+    def __init__(self, ego_speed_range: tuple[float, float] = (15.0, 25.0)):
+        """
+        ego_speed_range: [m/s] ego's initial v_x each episode -- drawn by
+        generate_traffic exactly like a surr car's v0 (same rng.uniform
+        mechanism, same call), before any surr car is placed. Defaults to
+        (15.0, 25.0), the same overall span initialization.traffic_init's
+        SPEED_RANGES covers across behaviours -- pass (0.0, 0.0) to start
+        ego at rest instead.
+        """
         super().__init__()
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
         obs_dim = 5 + 4 * N_SURR
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
+        self.ego_speed_range = ego_speed_range
         self.mobil_params = MobilParams()
         self.road: Road | None = None
         self.agents = None
@@ -104,11 +113,11 @@ class EgoTrafficEnv(gym.Env):
         super().reset(seed = seed)   # sets self.np_random; reseeds only if seed is not None
 
         self.road = Road(**ROAD_KWARGS)
-        self.agents = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
-                                        rng = self.np_random)
+        self.agents, ego_v0 = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
+                                                ego_speed_range = self.ego_speed_range, rng = self.np_random)
 
         ego_lane = LANE_NUM // 2
-        self.ego_car = Car(state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = 0.0, lane = ego_lane),
+        self.ego_car = Car(state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
                             vehicle_params = VehicleParameters())
         self._update_ego_pose()
 
