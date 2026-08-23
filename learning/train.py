@@ -26,6 +26,8 @@ def main():
                          help = f"parallel envs, each in its own subprocess (see SubprocVecEnv below) "
                                 f"-- defaults to cpu_count - 1 ({_DEFAULT_N_ENVS} on this machine).")
     parser.add_argument("--out", type = str, default = "learning/ppo_ego")
+    parser.add_argument("--n-epochs", type = int, default = 30,
+                         help = "PPO gradient-descent passes over each collected rollout (SB3 default is 10).")
     parser.add_argument("--ego-speed-min", type = float, default = 15.0,
                          help = "[m/s] lower bound ego's initial v_x is drawn from each episode -- "
                                 "drawn the same way a surr car's v0 is (see generate_traffic).")
@@ -55,7 +57,7 @@ def main():
     # own IPC overhead.
     vec_env = make_vec_env(EgoTrafficEnv, n_envs = args.n_envs, vec_env_cls = SubprocVecEnv,
                             env_kwargs = dict(ego_speed_range = ego_speed_range))
-    model = PPO("MlpPolicy", vec_env, verbose = 1, device = args.device)
+    model = PPO("MlpPolicy", vec_env, verbose = 1, device = args.device, n_epochs = args.n_epochs)
     model.learn(total_timesteps = args.timesteps)
     model.save(args.out)
 

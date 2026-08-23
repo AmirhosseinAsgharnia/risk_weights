@@ -2,3 +2,5 @@
 .python-version
 *.pyc
 *.pytest_cache
+*.zip
+__pycache__
