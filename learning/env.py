@@ -77,10 +77,13 @@ _KAPPA_PREVIEW_DIST = 20.0   # [m] fixed lookahead for the curvature-ahead featu
 class EgoTrafficEnv(gym.Env):
     """See module docstring. Observation is a fixed-size full traffic
     snapshot (N_SURR is constant -- no padding/masking): 5 ego features
-    followed by 4 features per surr car, in `agents`' list order (that
-    order is fixed for the life of an episode, but which physical car ends
-    up at which index varies episode to episode -- an MLP policy just
-    treats it as 15 fixed "slots", which is what was asked for here)."""
+    (v_x, e_y against the nearest lane, e_psi, nearest-lane index,
+    curvature ahead) followed by 3 features per surr car (relative s,
+    relative lane, v_x), in
+    `agents`' list order (that order is fixed for the life of an episode,
+    but which physical car ends up at which index varies episode to
+    episode -- an MLP policy just treats it as 15 fixed "slots", which is
+    what was asked for here). See _get_obs for the exact layout."""
 
     metadata = {"render_modes": []}
 
@@ -95,7 +98,7 @@ class EgoTrafficEnv(gym.Env):
         """
         super().__init__()
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
-        obs_dim = 5 + 4 * N_SURR
+        obs_dim = 5 + 3 * N_SURR
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
         self.ego_speed_range = ego_speed_range
@@ -182,6 +185,20 @@ class EgoTrafficEnv(gym.Env):
         lane_obj = self.road.lanes[state.lane]
         return -lane_obj.offset + state.e_y   # type: ignore
 
+    def _ego_nearest_lane(self) -> tuple[int, float]:
+        """(index, e_y) of whichever lane centerline is currently closest
+        to ego, in the shared backbone frame -- NOT necessarily
+        ego_car.state.lane, which never updates for ego (no MOBIL/lane-
+        commit controller drives it the way surr cars have). Using the
+        nearest lane instead keeps both this e_y and, below, surr cars'
+        relative-lane feature meaningful after ego drifts across a lane
+        boundary, rather than staying pinned to whatever lane it spawned
+        in for the whole episode."""
+        backbone_e_y = self._ego_backbone_e_y()
+        lane_centers = [-lane.offset for lane in self.road.lanes]   # type: ignore
+        idx = min(range(len(lane_centers)), key = lambda i: abs(backbone_e_y - lane_centers[i]))
+        return idx, backbone_e_y - lane_centers[idx]
+
     def _ego_collided(self) -> bool:
         return ego_overlaps_any(self.ego_car.state.s, self._ego_backbone_e_y(), self.agents, self.road)
 
@@ -192,16 +209,26 @@ class EgoTrafficEnv(gym.Env):
         return p_roll > ROLLOVER_PROB_THRESHOLD
 
     def _get_obs(self) -> np.ndarray:
+        """5 ego features + 3 features per surr car (fixed N_SURR slots,
+        `agents`' list order). Ego's lane feature is the *nearest* lane
+        index (see _ego_nearest_lane), not the raw ego_car.state.lane --
+        that never updates on its own (no MOBIL/lane-commit controller for
+        ego), so it would stay pinned to ego's spawn lane forever. No
+        crashed flag for surr cars: a crash instantly changes that car's
+        v_x to the momentum-conserved value (see model.collision), and
+        step() always resolves collisions before building this
+        observation, so the speed itself is already the tell."""
         state = self.ego_car.state
+        ego_lane_idx, e_y_nearest = self._ego_nearest_lane()
 
         idx_preview = self.road.index_at(state.s + _KAPPA_PREVIEW_DIST)
         kappa_preview = -self.road.lanes[state.lane].kappa[idx_preview]   # type: ignore
 
         ego_feats = [
             state.v_x / _V_SCALE,
-            state.e_y / _EY_SCALE,
+            e_y_nearest / _EY_SCALE,
             state.e_psi,
-            state.lane / (LANE_NUM - 1),
+            ego_lane_idx / (LANE_NUM - 1),
             kappa_preview * _KAPPA_SCALE,
         ]
 
@@ -210,9 +237,8 @@ class EgoTrafficEnv(gym.Env):
             car_state = agent.car.state
             surr_feats.extend([
                 (car_state.s - state.s) / _S_SCALE,
-                (car_state.lane - state.lane) / (LANE_NUM - 1),
+                (car_state.lane - ego_lane_idx) / (LANE_NUM - 1),
                 car_state.v_x / _V_SCALE,
-                1.0 if agent.crashed else 0.0,
             ])
 
         return np.asarray(ego_feats + surr_feats, dtype = np.float32)
