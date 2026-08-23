@@ -85,29 +85,46 @@ def generate_traffic(
         speed_ranges: dict[int, tuple[float, float]] = SPEED_RANGES,
         behaviours: tuple[int, ...] = (1, 2, 3),
         min_gap: float = 6.0,
+        ego_speed_range: tuple[float, float] = (15.0, 25.0),
+        ego_gap_multiplier: float = 1.5,
         max_place_attempts: int = 200,
         rng: np.random.Generator | None = None,
-) -> list[TrafficAgent]:
+) -> tuple[list[TrafficAgent], float]:
     """
-    Place n_cars around ego_s (no ego car itself -- ego_s is just the
-    reference point d is measured from). Each car gets an independent
-    random lane, longitudinal offset d ~ U(d_range) (so s = ego_s + d,
-    resampled up to max_place_attempts times if it would land within
-    min_gap of an already-placed car in the same lane -- unconstrained
-    i.i.d. placement can otherwise spawn two cars overlapping, which sends
-    IDM's (s_star/gap)^2 term toward infinity and blows up the first
-    integration step), behaviour ~ choice(behaviours) (selecting its
-    IDM_PRESETS/FAR_NEAR_PRESETS entry), and desired speed v0 ~
-    U(speed_ranges[behaviour]) -- conservative/moderate/aggressive draw
-    from their own (narrower, and offset) range rather than sharing one.
+    Place n_cars around ego_s. Ego itself is treated as a vehicle here too,
+    not just a reference point: its own initial speed ego_v0 ~
+    U(ego_speed_range) is drawn first (the same rng.uniform mechanism, and
+    the same point in the draw sequence, as "vehicle zero" -- before any
+    surr car), and every surr car keeps at least min_gap *
+    ego_gap_multiplier from ego_s -- a bigger cushion than the min_gap surr
+    cars keep from each other, since ego needs room to react rather than
+    just avoid a spawn that's already guaranteed to collide.
 
-    Initial speeds are each car's IDM *steady-state* speed for the gap it
-    landed in: within each lane, cars are resolved front-to-back (largest
-    s first) so every car's leader has an already-known steady-state speed
-    by the time it's this car's turn; the front-most car in each lane (no
-    leader) gets its own v0 outright.
+    Each surr car gets an independent random lane, longitudinal offset d ~
+    U(d_range) (so s = ego_s + d, resampled up to max_place_attempts times
+    if it would land within min_gap * ego_gap_multiplier of ego_s, or
+    within min_gap of an already-placed surr car in the same lane --
+    unconstrained i.i.d. placement can otherwise spawn two cars
+    overlapping, which sends IDM's (s_star/gap)^2 term toward infinity and
+    blows up the first integration step), behaviour ~ choice(behaviours)
+    (selecting its IDM_PRESETS/FAR_NEAR_PRESETS entry), and desired speed
+    v0 ~ U(speed_ranges[behaviour]) -- conservative/moderate/aggressive
+    draw from their own (narrower, and offset) range rather than sharing
+    one.
+
+    Initial speeds are each surr car's IDM *steady-state* speed for the gap
+    it landed in: within each lane, cars are resolved front-to-back
+    (largest s first) so every car's leader has an already-known steady-
+    state speed by the time it's this car's turn; the front-most car in
+    each lane (no leader) gets its own v0 outright. ego_v0 is left as drawn
+    -- ego has no IDM/steady-state concept, it's whatever controls it.
+
+    Returns (agents, ego_v0).
     """
     rng = rng or np.random.default_rng()
+
+    ego_v0 = float(rng.uniform(*ego_speed_range))
+    ego_min_gap = min_gap * ego_gap_multiplier
 
     cars: list[Car] = []
     v0s: list[float] = []
@@ -117,6 +134,8 @@ def generate_traffic(
         for _ in range(max_place_attempts):
             d = float(rng.uniform(*d_range))
             s_candidate = ego_s + d
+            if abs(d) < ego_min_gap:
+                continue
             if all(abs(s_candidate - s) >= min_gap for s in s_taken_by_lane[lane]):
                 break
         s_taken_by_lane[lane].append(s_candidate)
@@ -145,7 +164,8 @@ def generate_traffic(
             car.state.v_x = v_ss
             leader_s, leader_v = car.state.s, v_ss
 
-    return [
+    agents = [
         TrafficAgent(car=car, v0=v0, target_lane=car.state.lane)
         for car, v0 in zip(cars, v0s)
     ]
+    return agents, ego_v0

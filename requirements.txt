@@ -1,0 +1,17 @@
+# Core numerics / plotting
+numpy==2.5.1
+scipy==1.18.0
+matplotlib==3.11.0
+
+# Reinforcement learning (learning/)
+gymnasium==1.3.0
+stable-baselines3==2.9.0
+# No index pin here on purpose: a normal `pip install -r requirements.txt`
+# pulls PyPI's default torch wheel, which is CUDA-enabled on Linux/Windows
+# -- exactly what you want on a GPU machine (see learning/train.py --device).
+# This dev machine has no GPU, so it was installed CPU-only instead via:
+#   pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0
+
+# Tests (pyproject.toml configures pytest; see tests/)
+pytest==9.1.1

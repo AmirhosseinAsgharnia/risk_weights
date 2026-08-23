@@ -1,0 +1,218 @@
+"""
+Gymnasium environment for training the ego vehicle with reinforcement
+learning: the ego directly commands (accel, delta) each step; surrounding
+("surr") traffic runs the existing IDM/MOBIL/far-near stack unchanged (see
+model.traffic_step) on the same Road/curve scenario tests/traffic_test.py
+demos.
+
+Episode = one lap of the fixed scenario (Road(s_max=500, kappa_max=0.005,
+L_clothoid=60, mu=1.0, lane_num=3), 15 surr cars, same as
+tests/traffic_test.py) up to EPISODE_SECONDS of sim time.
+
+Terminal states (see the constructor's own docstring for the reward this
+produces):
+  - collision: ego's body overlaps ANY surr body (crashed or not) --
+    model.collision.ego_overlaps_any. Ego is never run through the surr
+    plastic-crash model (see that module) -- a collision just ends the
+    episode.
+  - rollover: risks.rollover.rollover's P_roll for ego's current (v, delta)
+    exceeds ROLLOVER_PROB_THRESHOLD.
+Both are `terminated`. Reaching EPISODE_SECONDS without either is
+`truncated` (Gymnasium's distinction: a true MDP failure vs. a time-limit
+cutoff on an otherwise-ongoing task) -- see step()'s docstring for why the
+survival bonus is attached there rather than to `terminated`.
+"""
+
+import numpy as np
+import gymnasium as gym
+from gymnasium import spaces
+
+from model.road.road import Road
+from model.car.car import Car, CarState
+from model.car.config import VehicleParameters
+from model.traffic_step import step_surr_agents
+from model.collision import ego_overlaps_any
+from controllers.mobil import MobilParams
+from initialization.traffic_init import generate_traffic, CAR_WIDTH
+from risks.rollover import rollover, TrajectoryStep as RolloverStep
+
+# ── Fixed scenario (matches tests/traffic_test.py) ──────────────────────────
+N_SURR = 15
+LANE_NUM = 3
+EGO_S0 = 50.0
+DT = 0.05
+EPISODE_SECONDS = 20.0
+MAX_STEPS = int(EPISODE_SECONDS / DT)
+
+ROAD_KWARGS = dict(s_max = 500, kappa_max = 0.005, L_clothoid = 60, mu = 1.0, lane_num = LANE_NUM)
+MAX_BRAKING = 8.0            # [m/s^2] same clamp used on surr IDM in model.traffic_step
+LANE_CHANGE_COOLDOWN = 1.0   # [s] see model.traffic_step
+CRASH_BLEED_K = 1.0          # [-] see model.collision.bleed_crashed
+
+# ── Action space: accel in [ACCEL_MIN, ACCEL_MAX], delta in +/-DELTA_MAX ───
+ACCEL_MIN = -8.0   # [m/s^2] matches MAX_BRAKING -- ego can brake as hard as surr cars are clamped to
+ACCEL_MAX = 4.0    # [m/s^2] typical passenger-car acceleration ceiling
+DELTA_MAX = 0.5    # [rad] front-wheel steering lock, ~29 deg
+
+# ── Reward ───────────────────────────────────────────────────────────────
+# Per-step shaping is proportional to forward progress (delta-s this step);
+# NOMINAL_SPEED/EPISODE_SECONDS calibrate PROGRESS_REWARD_SCALE so a full,
+# clean, roughly-nominal-speed episode accumulates shaping reward on the
+# same order as the terminal survival bonus (~1.0) -- if shaping dominated
+# the return, the agent would have little incentive to actually avoid the
+# terminal states, and if it were negligible it wouldn't shape anything.
+NOMINAL_SPEED = 20.0   # [m/s] rough cruising speed used only for this calibration
+PROGRESS_REWARD_SCALE = 1.0 / (NOMINAL_SPEED * EPISODE_SECONDS)
+SURVIVAL_REWARD = 1.0   # added once, at truncation (reaching EPISODE_SECONDS unharmed)
+ROLLOVER_PROB_THRESHOLD = 0.5   # P_roll above this counts as "rolled over" this step
+
+# ── Observation normalization (fixed scales, not learned -- see _get_obs) ──
+_V_SCALE = 30.0     # [m/s]
+_EY_SCALE = CAR_WIDTH   # [m] lane half-width is 2.0 m; keeps e_y roughly O(1)
+_S_SCALE = 100.0   # [m] relative longitudinal distance to a surr car
+_KAPPA_SCALE = 100.0   # 1/kappa_max-ish, brings curvature into an O(1) range
+_KAPPA_PREVIEW_DIST = 20.0   # [m] fixed lookahead for the curvature-ahead feature
+
+
+class EgoTrafficEnv(gym.Env):
+    """See module docstring. Observation is a fixed-size full traffic
+    snapshot (N_SURR is constant -- no padding/masking): 5 ego features
+    followed by 4 features per surr car, in `agents`' list order (that
+    order is fixed for the life of an episode, but which physical car ends
+    up at which index varies episode to episode -- an MLP policy just
+    treats it as 15 fixed "slots", which is what was asked for here)."""
+
+    metadata = {"render_modes": []}
+
+    def __init__(self, ego_speed_range: tuple[float, float] = (15.0, 25.0)):
+        """
+        ego_speed_range: [m/s] ego's initial v_x each episode -- drawn by
+        generate_traffic exactly like a surr car's v0 (same rng.uniform
+        mechanism, same call), before any surr car is placed. Defaults to
+        (15.0, 25.0), the same overall span initialization.traffic_init's
+        SPEED_RANGES covers across behaviours -- pass (0.0, 0.0) to start
+        ego at rest instead.
+        """
+        super().__init__()
+        self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
+        obs_dim = 5 + 4 * N_SURR
+        self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
+
+        self.ego_speed_range = ego_speed_range
+        self.mobil_params = MobilParams()
+        self.road: Road | None = None
+        self.agents = None
+        self.ego_car: Car | None = None
+        self.t = 0.0
+        self.step_count = 0
+        self._prev_s = 0.0
+
+    # ── Gymnasium API ────────────────────────────────────────────────────
+
+    def reset(self, *, seed: int | None = None, options: dict | None = None):
+        super().reset(seed = seed)   # sets self.np_random; reseeds only if seed is not None
+
+        self.road = Road(**ROAD_KWARGS)
+        self.agents, ego_v0 = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
+                                                ego_speed_range = self.ego_speed_range, rng = self.np_random)
+
+        ego_lane = LANE_NUM // 2
+        self.ego_car = Car(state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
+                            vehicle_params = VehicleParameters())
+        self._update_ego_pose()
+
+        self.t = 0.0
+        self.step_count = 0
+        self._prev_s = self.ego_car.state.s
+
+        return self._get_obs(), {}
+
+    def step(self, action: np.ndarray):
+        accel, delta = self._unscale_action(action)
+
+        idx = self.road.index_at(self.ego_car.state.s)
+        kappa = -self.road.lanes[self.ego_car.state.lane].kappa[idx]   # type: ignore
+        self.ego_car.step(accel, delta, kappa, self.road.mu, DT)
+        self._update_ego_pose()
+
+        step_surr_agents(self.agents, self.road, self.t, DT,
+                          mobil_params = self.mobil_params, lane_num = LANE_NUM,
+                          max_braking = MAX_BRAKING, lane_change_cooldown = LANE_CHANGE_COOLDOWN,
+                          crash_bleed_k = CRASH_BLEED_K)
+
+        self.t += DT
+        self.step_count += 1
+
+        progress = self.ego_car.state.s - self._prev_s
+        self._prev_s = self.ego_car.state.s
+        reward = PROGRESS_REWARD_SCALE * progress
+
+        collided = self._ego_collided()
+        rolled_over = self._ego_rolled_over()
+        terminated = collided or rolled_over
+
+        truncated = False
+        if not terminated and self.step_count >= MAX_STEPS:
+            truncated = True
+            reward += SURVIVAL_REWARD
+
+        info = {"collided": collided, "rolled_over": rolled_over, "s": self.ego_car.state.s}
+        return self._get_obs(), reward, terminated, truncated, info
+
+    # ── Internals ────────────────────────────────────────────────────────
+
+    def _update_ego_pose(self) -> None:
+        """Global (x, y, heading), stored on ego_car.state -- same
+        convention model.traffic_step uses for surr cars (needed here for
+        anything downstream that wants to render a rollout)."""
+        state = self.ego_car.state
+        lane_obj = self.road.lanes[state.lane]
+        backbone_e_y = -lane_obj.offset + state.e_y   # type: ignore
+        x, y, heading = self.road.frenet_to_global(state.s, backbone_e_y, state.e_psi)
+        state.x, state.y, state.heading = x, y, heading
+
+    def _unscale_action(self, action: np.ndarray) -> tuple[float, float]:
+        action = np.clip(np.asarray(action, dtype = np.float64), -1.0, 1.0)
+        accel = ACCEL_MIN + (action[0] + 1.0) * 0.5 * (ACCEL_MAX - ACCEL_MIN)
+        delta = action[1] * DELTA_MAX
+        return float(accel), float(delta)
+
+    def _ego_backbone_e_y(self) -> float:
+        state = self.ego_car.state
+        lane_obj = self.road.lanes[state.lane]
+        return -lane_obj.offset + state.e_y   # type: ignore
+
+    def _ego_collided(self) -> bool:
+        return ego_overlaps_any(self.ego_car.state.s, self._ego_backbone_e_y(), self.agents, self.road)
+
+    def _ego_rolled_over(self) -> bool:
+        state = self.ego_car.state
+        p_roll, _ = rollover([RolloverStep(v = state.v_x, delta = state.delta)],
+                              vehicle_params = self.ego_car.vehicle_params)
+        return p_roll > ROLLOVER_PROB_THRESHOLD
+
+    def _get_obs(self) -> np.ndarray:
+        state = self.ego_car.state
+
+        idx_preview = self.road.index_at(state.s + _KAPPA_PREVIEW_DIST)
+        kappa_preview = -self.road.lanes[state.lane].kappa[idx_preview]   # type: ignore
+
+        ego_feats = [
+            state.v_x / _V_SCALE,
+            state.e_y / _EY_SCALE,
+            state.e_psi,
+            state.lane / (LANE_NUM - 1),
+            kappa_preview * _KAPPA_SCALE,
+        ]
+
+        surr_feats: list[float] = []
+        for agent in self.agents:
+            car_state = agent.car.state
+            surr_feats.extend([
+                (car_state.s - state.s) / _S_SCALE,
+                (car_state.lane - state.lane) / (LANE_NUM - 1),
+                car_state.v_x / _V_SCALE,
+                1.0 if agent.crashed else 0.0,
+            ])
+
+        return np.asarray(ego_feats + surr_feats, dtype = np.float32)

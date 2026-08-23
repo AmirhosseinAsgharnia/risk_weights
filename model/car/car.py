@@ -11,20 +11,21 @@ _id_counter = itertools.count()
 @dataclass
 class CarState:
     """A car's dynamics state (CarDynamics convention, [s, e_y, e_psi, v_x,
-    v_y, r]) plus the bits Car tracks alongside it. x/y (global Cartesian)
-    and lane are left None -- assigning them is a road/scenario concern,
-    not this class's."""
+    v_y, r]) plus the bits Car tracks alongside it. x/y/heading (global
+    Cartesian pose) and lane are left None -- assigning them is a road/
+    scenario concern, not this class's."""
 
-    s:     float = 0.0   # [m] arclength along the road centreline
-    e_y:   float = 0.0   # [m] lateral offset from the centreline, SAE +right
-    e_psi: float = 0.0   # [rad] heading error relative to the centreline
-    v_x:   float = 0.0   # [m/s] longitudinal speed, body frame
-    v_y:   float = 0.0   # [m/s] lateral speed, body frame
-    r:     float = 0.0   # [rad/s] yaw rate
-    delta: float = 0.0   # [rad] last commanded front steering angle
-    x:     float | None = None   # [m] global Cartesian position
-    y:     float | None = None   # [m] global Cartesian position
-    lane:  int   | None = None   # current lane index
+    s:       float = 0.0   # [m] arclength along the road centreline
+    e_y:     float = 0.0   # [m] lateral offset from the centreline, SAE +right
+    e_psi:   float = 0.0   # [rad] heading error relative to the centreline
+    v_x:     float = 0.0   # [m/s] longitudinal speed, body frame
+    v_y:     float = 0.0   # [m/s] lateral speed, body frame
+    r:       float = 0.0   # [rad/s] yaw rate
+    delta:   float = 0.0   # [rad] last commanded front steering angle
+    x:       float | None = None   # [m] global Cartesian position
+    y:       float | None = None   # [m] global Cartesian position
+    heading: float | None = None   # [rad] global heading (Road.frenet_to_global's psi)
+    lane:    int   | None = None   # current lane index
 
     def as_array(self) -> np.ndarray:
         """[s, e_y, e_psi, v_x, v_y, r] -- the CarDynamics state vector."""
