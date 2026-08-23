@@ -76,9 +76,10 @@ _KAPPA_PREVIEW_DIST = 20.0   # [m] fixed lookahead for the curvature-ahead featu
 
 class EgoTrafficEnv(gym.Env):
     """See module docstring. Observation is a fixed-size full traffic
-    snapshot (N_SURR is constant -- no padding/masking): 4 ego features
-    (v_x, e_y against the nearest lane, e_psi, curvature ahead) followed
-    by 3 features per surr car (relative s, relative lane, v_x), in
+    snapshot (N_SURR is constant -- no padding/masking): 5 ego features
+    (v_x, e_y against the nearest lane, e_psi, nearest-lane index,
+    curvature ahead) followed by 3 features per surr car (relative s,
+    relative lane, v_x), in
     `agents`' list order (that order is fixed for the life of an episode,
     but which physical car ends up at which index varies episode to
     episode -- an MLP policy just treats it as 15 fixed "slots", which is
@@ -97,7 +98,7 @@ class EgoTrafficEnv(gym.Env):
         """
         super().__init__()
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
-        obs_dim = 4 + 3 * N_SURR
+        obs_dim = 5 + 3 * N_SURR
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
         self.ego_speed_range = ego_speed_range
@@ -208,13 +209,15 @@ class EgoTrafficEnv(gym.Env):
         return p_roll > ROLLOVER_PROB_THRESHOLD
 
     def _get_obs(self) -> np.ndarray:
-        """4 ego features + 3 features per surr car (fixed N_SURR slots,
-        `agents`' list order). No lane index for ego (e_y against the
-        nearest lane already carries that information continuously) and
-        no crashed flag for surr cars (a crash instantly changes that
-        car's v_x to the momentum-conserved value -- see model.collision
-        -- and step() always resolves collisions before building this
-        observation, so the speed itself is already the tell)."""
+        """5 ego features + 3 features per surr car (fixed N_SURR slots,
+        `agents`' list order). Ego's lane feature is the *nearest* lane
+        index (see _ego_nearest_lane), not the raw ego_car.state.lane --
+        that never updates on its own (no MOBIL/lane-commit controller for
+        ego), so it would stay pinned to ego's spawn lane forever. No
+        crashed flag for surr cars: a crash instantly changes that car's
+        v_x to the momentum-conserved value (see model.collision), and
+        step() always resolves collisions before building this
+        observation, so the speed itself is already the tell."""
         state = self.ego_car.state
         ego_lane_idx, e_y_nearest = self._ego_nearest_lane()
 
@@ -225,6 +228,7 @@ class EgoTrafficEnv(gym.Env):
             state.v_x / _V_SCALE,
             e_y_nearest / _EY_SCALE,
             state.e_psi,
+            ego_lane_idx / (LANE_NUM - 1),
             kappa_preview * _KAPPA_SCALE,
         ]
 
