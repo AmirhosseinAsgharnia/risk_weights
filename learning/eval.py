@@ -45,15 +45,13 @@ def main():
     parser.add_argument("--seed", type = int, default = None)
     parser.add_argument("--stochastic", action = "store_true",
                          help = "sample actions from the policy instead of using its deterministic mean")
-    parser.add_argument("--ego-speed-min", type = float, default = 15.0,
-                         help = "[m/s] lower bound ego's initial v_x is drawn from -- should match "
-                                "whatever the model was trained with.")
-    parser.add_argument("--ego-speed-max", type = float, default = 25.0,
-                         help = "[m/s] upper bound ego's initial v_x is drawn from.")
+    parser.add_argument("--ego-speed-std", type = float, default = 2.5,
+                         help = "[m/s] ego's initial v_x ~ Normal(mean(realized surr v_x), this) -- "
+                                "should match whatever the model was trained with.")
     args = parser.parse_args()
 
     model = PPO.load(args.model)
-    env = EgoTrafficEnv(ego_speed_range = (args.ego_speed_min, args.ego_speed_max))
+    env = EgoTrafficEnv(ego_speed_std = args.ego_speed_std)
     obs, info = env.reset(seed = args.seed)
 
     # Per-agent (and ego) pose history, recorded straight off env internals

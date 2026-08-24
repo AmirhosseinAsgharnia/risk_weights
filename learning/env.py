@@ -23,6 +23,8 @@ cutoff on an otherwise-ongoing task) -- see step()'s docstring for why the
 survival bonus is attached there rather than to `terminated`.
 """
 
+from typing import Literal
+
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -35,6 +37,7 @@ from model.collision import ego_overlaps_any
 from controllers.mobil import MobilParams
 from initialization.traffic_init import generate_traffic, CAR_WIDTH
 from risks.rollover import rollover, TrajectoryStep as RolloverStep
+from learning.scenario import ScenarioConfig, generate_scenario, derive_seed
 
 # ── Fixed scenario (matches tests/traffic_test.py) ──────────────────────────
 N_SURR = 15
@@ -87,21 +90,64 @@ class EgoTrafficEnv(gym.Env):
 
     metadata = {"render_modes": []}
 
-    def __init__(self, ego_speed_range: tuple[float, float] = (15.0, 25.0)):
+    def __init__(
+            self,
+            ego_speed_std: float = 2.5,
+            scenario_config: ScenarioConfig | None = None,
+            mode: Literal["fixed", "distribution"] = "distribution",
+            worker_rank: int = 0,
+    ):
         """
-        ego_speed_range: [m/s] ego's initial v_x each episode -- drawn by
-        generate_traffic exactly like a surr car's v0 (same rng.uniform
-        mechanism, same call), before any surr car is placed. Defaults to
-        (15.0, 25.0), the same overall span initialization.traffic_init's
-        SPEED_RANGES covers across behaviours -- pass (0.0, 0.0) to start
-        ego at rest instead.
+        ego_speed_std: [m/s] ego is the road speed, not an independently
+        set quantity: its initial v_x each episode ~ Normal(mean(realized
+        surr v_x), ego_speed_std) -- see generate_traffic. Only used when
+        scenario_config is None (see below) -- this is the original,
+        fully-random-traffic path. Default 2.5 matches
+        learning.scenario.ScenarioConfig's default background_speed_std,
+        for consistency between the two paths.
+
+        scenario_config: if given, every reset() instead realizes this
+        ScenarioConfig via learning.scenario.generate_scenario -- exactly
+        15 surr cars (3 explicit critical actors + 12 stochastic
+        background), ego_speed_std is ignored (ego's speed is drawn from
+        Normal(background_mean_speed, background_speed_std) instead --
+        same idea, just that path's own config fields), and the road is
+        built from scenario_config.road_mu/road_kappa_max rather than
+        ROAD_KWARGS. See mode below for how the background realization
+        varies (or doesn't) across resets.
+
+        mode: only meaningful when scenario_config is given.
+          "fixed":        every reset() reconstructs the *exact* same
+                           realization (background included) -- for
+                           training/evaluating whether one specific
+                           scenario is solvable at all. worker_rank is
+                           ignored so parallel envs training on the same
+                           fixed scenario all see the same realization.
+          "distribution": the critical actors and globals stay fixed, but
+                           the background realization varies across resets
+                           (a new episode index each time) -- for
+                           estimating a success probability over the
+                           scenario family. See derive_seed for how
+                           worker_rank/episode_index keep parallel
+                           SubprocVecEnv workers from producing identical
+                           sequences while staying reproducible.
+
+        worker_rank: this env's rank among parallel envs (only used to
+        seed distribution-mode background realizations differently per
+        worker -- see learning.train's SubprocVecEnv construction).
         """
         super().__init__()
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
         obs_dim = 5 + 3 * N_SURR
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
-        self.ego_speed_range = ego_speed_range
+        self.ego_speed_std = ego_speed_std
+        self.scenario_config = scenario_config
+        self.mode = mode
+        self.worker_rank = worker_rank
+        self._episode_counter = 0
+        self._realized_scenario: dict | None = None
+
         self.mobil_params = MobilParams()
         self.road: Road | None = None
         self.agents = None
@@ -115,11 +161,41 @@ class EgoTrafficEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed = seed)   # sets self.np_random; reseeds only if seed is not None
 
-        self.road = Road(**ROAD_KWARGS)
-        self.agents, ego_v0 = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
-                                                ego_speed_range = self.ego_speed_range, rng = self.np_random)
+        if self.scenario_config is None:
+            # Original path: fully-random traffic, unchanged.
+            self.road = Road(**ROAD_KWARGS)
+            self.agents, ego_v0 = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
+                                                    ego_speed_std = self.ego_speed_std, rng = self.np_random)
+            ego_lane = LANE_NUM // 2
+        else:
+            # Compact-scenario path (see __init__'s own docstring). `seed`
+            # passed to this reset() call only restarts the episode
+            # counter (a reproducible restart point for a distribution-
+            # mode sequence) -- it never overrides scenario_config.seed,
+            # so an unrelated Gym seed can't silently change the scenario.
+            if seed is not None:
+                self._episode_counter = 0
 
-        ego_lane = LANE_NUM // 2
+            if self.mode == "fixed":
+                episode_index, worker_rank = 0, 0
+            else:
+                episode_index, worker_rank = self._episode_counter, self.worker_rank
+                self._episode_counter += 1
+
+            scenario_seed = derive_seed(self.scenario_config.seed, worker_rank, episode_index)
+            scenario_rng = np.random.default_rng(scenario_seed)   # dedicated stream -- never self.np_random
+
+            self.road = Road(s_max = ROAD_KWARGS["s_max"], kappa_max = self.scenario_config.road_kappa_max,
+                              L_clothoid = ROAD_KWARGS["L_clothoid"], mu = self.scenario_config.road_mu,
+                              lane_num = LANE_NUM)
+            ego_lane = LANE_NUM // 2
+            self.agents, ego_v0, self._realized_scenario = generate_scenario(
+                self.scenario_config, self.road, ego_s = EGO_S0, ego_lane = ego_lane, rng = scenario_rng,
+                worker_rank = worker_rank, episode_index = episode_index, scenario_seed = scenario_seed,
+            )
+            # tendency > 1 => lower threshold => more lane changes (see ScenarioConfig.lane_change_tendency)
+            self.mobil_params = MobilParams(threshold = MobilParams().threshold / self.scenario_config.lane_change_tendency)
+
         self.ego_car = Car(state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
                             vehicle_params = VehicleParameters())
         self._update_ego_pose()
@@ -161,6 +237,21 @@ class EgoTrafficEnv(gym.Env):
 
         info = {"collided": collided, "rolled_over": rolled_over, "s": self.ego_car.state.s}
         return self._get_obs(), reward, terminated, truncated, info
+
+    def get_realized_scenario(self) -> dict:
+        """The JSON-serializable record of every realized initial
+        condition from the most recent reset() -- see
+        learning.scenario._build_realized for the exact structure. Only
+        populated when this env was constructed with a scenario_config;
+        raises otherwise (there's nothing to report on the fully-random
+        path -- initialization.traffic_init.generate_traffic doesn't
+        produce one)."""
+        if self._realized_scenario is None:
+            raise RuntimeError(
+                "get_realized_scenario() has nothing to return -- either reset() hasn't been called yet, "
+                "or this env has no scenario_config (the default fully-random-traffic path doesn't "
+                "produce a realized-scenario record).")
+        return self._realized_scenario
 
     # ── Internals ────────────────────────────────────────────────────────
 
