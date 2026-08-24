@@ -35,7 +35,7 @@ from model.car.config import VehicleParameters
 from model.traffic_step import step_surr_agents
 from model.collision import ego_overlaps_any
 from controllers.mobil import MobilParams
-from initialization.traffic_init import generate_traffic, CAR_WIDTH
+from initialization.traffic_init import generate_traffic, CAR_WIDTH, TEMPLATE_EGO_LANE
 from risks.rollover import rollover, TrajectoryStep as RolloverStep
 from learning.scenario import ScenarioConfig, generate_scenario, derive_seed
 
@@ -92,29 +92,23 @@ class EgoTrafficEnv(gym.Env):
 
     def __init__(
             self,
-            ego_speed_std: float = 2.5,
             scenario_config: ScenarioConfig | None = None,
             mode: Literal["fixed", "distribution"] = "distribution",
             worker_rank: int = 0,
     ):
         """
-        ego_speed_std: [m/s] ego is the road speed, not an independently
-        set quantity: its initial v_x each episode ~ Normal(mean(realized
-        surr v_x), ego_speed_std) -- see generate_traffic. Only used when
-        scenario_config is None (see below) -- this is the original,
-        fully-random-traffic path. Default 2.5 matches
-        learning.scenario.ScenarioConfig's default background_speed_std,
-        for consistency between the two paths.
-
         scenario_config: if given, every reset() instead realizes this
         ScenarioConfig via learning.scenario.generate_scenario -- exactly
         15 surr cars (3 explicit critical actors + 12 stochastic
-        background), ego_speed_std is ignored (ego's speed is drawn from
-        Normal(background_mean_speed, background_speed_std) instead --
-        same idea, just that path's own config fields), and the road is
-        built from scenario_config.road_mu/road_kappa_max rather than
-        ROAD_KWARGS. See mode below for how the background realization
-        varies (or doesn't) across resets.
+        background), ego's speed drawn from Normal(background_mean_speed,
+        background_speed_std) (that path's own config fields), and the
+        road is built from scenario_config.road_mu/road_kappa_max rather
+        than ROAD_KWARGS. See mode below for how the background
+        realization varies (or doesn't) across resets. If omitted, every
+        reset() instead realizes initialization.traffic_init's fixed
+        16-slot traffic template (see generate_traffic) -- ego's speed
+        there is the IDM steady-state speed resolved for its fixed slot,
+        not an independently drawn quantity.
 
         mode: only meaningful when scenario_config is given.
           "fixed":        every reset() reconstructs the *exact* same
@@ -141,7 +135,6 @@ class EgoTrafficEnv(gym.Env):
         obs_dim = 5 + 3 * N_SURR
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
-        self.ego_speed_std = ego_speed_std
         self.scenario_config = scenario_config
         self.mode = mode
         self.worker_rank = worker_rank
@@ -162,11 +155,13 @@ class EgoTrafficEnv(gym.Env):
         super().reset(seed = seed)   # sets self.np_random; reseeds only if seed is not None
 
         if self.scenario_config is None:
-            # Original path: fully-random traffic, unchanged.
+            # Legacy path: initialization.traffic_init's fixed 16-slot
+            # traffic template (see generate_traffic) -- ego_lane must
+            # match TEMPLATE_EGO_LANE, the lane the template's fixed ego
+            # slot actually lives in, not an independently-assumed value.
             self.road = Road(**ROAD_KWARGS)
-            self.agents, ego_v0 = generate_traffic(N_SURR, ego_s = EGO_S0, lanes = tuple(range(LANE_NUM)),
-                                                    ego_speed_std = self.ego_speed_std, rng = self.np_random)
-            ego_lane = LANE_NUM // 2
+            self.agents, ego_v0 = generate_traffic(ego_s = EGO_S0, rng = self.np_random)
+            ego_lane = TEMPLATE_EGO_LANE
         else:
             # Compact-scenario path (see __init__'s own docstring). `seed`
             # passed to this reset() call only restarts the episode

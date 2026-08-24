@@ -134,6 +134,31 @@ class Road:
         y = self.y[idx] - e_y * np.cos(psi)
         return x, y, psi - e_psi
 
+    def offset_curve(self, offset: float) -> tuple[np.ndarray, np.ndarray]:
+        """(x, y) of the curve running everywhere `offset` [m] from this
+        road's own backbone (offset-0) curve -- same (sin(heading),
+        cos(heading)) offset-direction convention lane_calc's own
+        x_init/y_init use (see frenet_to_global's docstring for how this
+        differs from that method's SAE "+right" convention).
+
+        Correctly accounts for the arc-length stretch/compression a
+        laterally-offset curve undergoes through a curved section (the
+        `1 - offset * kappa` factor, same as lane_calc): integrating
+        cos/sin(heading) against this offset-scaled arc length, rather
+        than against the backbone's own arc length, is what keeps a fixed
+        offset from the backbone truly fixed all the way through and
+        after a curve. A naive per-point (sin, cos) shift added directly
+        onto an already-built lane centreline does NOT compose this way
+        -- e.g. extending lane 0's centreline outward by a further
+        half-width to get the road's outer edge visibly (and permanently)
+        narrows through a curve and never recovers; call this method with
+        the edge's own total offset instead of doing that.
+        """
+        lane_s = cumulative_trapezoid(1 - offset * self.kappa, self.s, initial=0.0)
+        x_init = offset * np.sin(self.heading[0])
+        y_init = offset * np.cos(self.heading[0])
+        return self.cartesean_calc(self.heading, lane_s, x_init, y_init)
+
     def lane_calc(self):
 
         L_w = self.l_w * self.lane_num
@@ -155,7 +180,4 @@ class Road:
 
             self.lanes[l].heading = self.heading
 
-            x_init = offsets[l] * np.sin(self.lanes[l].heading[0]) # type: ignore
-            y_init = offsets[l] * np.cos(self.lanes[l].heading[0]) # type: ignore
-
-            self.lanes[l].x , self.lanes[l].y= self.cartesean_calc( self.lanes[l].heading , self.lanes[l].s, x_init, y_init)
+            self.lanes[l].x , self.lanes[l].y = self.offset_curve(offsets[l])

@@ -78,11 +78,6 @@ def main():
                                 "experiment (different scenario_config/scenario_mode).")
     parser.add_argument("--n-epochs", type = int, default = 30,
                          help = "PPO gradient-descent passes over each collected rollout (SB3 default is 10).")
-    parser.add_argument("--ego-speed-std", type = float, default = 2.5,
-                         help = "[m/s] ego is the road speed, not an independent quantity: its initial "
-                                "v_x ~ Normal(mean(realized surr v_x), this). Only used without "
-                                "--scenario-config (with one, ScenarioConfig.background_mean_speed/"
-                                "background_speed_std governs ego's speed instead).")
     parser.add_argument("--device", type = str, default = "auto",
                          help = "'auto' (default, picks cuda if available), 'cuda', 'cuda:0', or 'cpu'. "
                                 "Note: the environment itself always runs on CPU (it's plain Python/NumPy "
@@ -131,8 +126,7 @@ def main():
     # workers identical background realizations.
     def _make_env(rank: int):
         def _init():
-            return EgoTrafficEnv(ego_speed_std = args.ego_speed_std, scenario_config = scenario_config,
-                                  mode = args.scenario_mode, worker_rank = rank)
+            return EgoTrafficEnv(scenario_config = scenario_config, mode = args.scenario_mode, worker_rank = rank)
         return _init
 
     vec_env = SubprocVecEnv([_make_env(i) for i in range(args.n_envs)])

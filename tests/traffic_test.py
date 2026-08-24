@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.animation import FuncAnimation
 
-from model.road.road import Road
-from controllers.mobil import MobilParams
 from initialization.traffic_init import CAR_LENGTH, CAR_WIDTH
-from model.traffic_step import step_surr_agents
-from model.car.car import Car, CarState
-from model.car.config import VehicleParameters
-from learning.scenario import ScenarioConfig, CriticalActorConfig, generate_scenario, derive_seed
+from learning.scenario import ScenarioConfig, CriticalActorConfig
+from learning.env import EgoTrafficEnv, LANE_NUM, DT, MAX_STEPS, ACCEL_MIN, ACCEL_MAX
+
+try:
+    from stable_baselines3 import PPO
+except ImportError:
+    PPO = None
 
 # ── Options ───────────────────────────────────────────────────────────────
 mode = "animation"   # "plot" (static figure) or "animation" (traffic driving live)
@@ -20,14 +21,19 @@ seed = 3   # scenario seed -- None draws a fresh scenario every run; set an
            # script only ever renders one deterministic realization, same
            # idea as EgoTrafficEnv's "fixed" mode).
 
+model_path = "learning/ppo_ego"   # trained PPO policy (see learning.train)
+                                   # that actually drives ego through the
+                                   # environment below. Set to None (or
+                                   # leave a missing path) to fall back to
+                                   # a simple hold-speed, straight-line
+                                   # ego controller instead, so this script
+                                   # still runs before anything's trained.
+
 # ── Scenario theta -- the hand knob: compact global + critical-actor
 # parameters (see learning.scenario.ScenarioConfig for full field docs).
 # Edit these directly and rerun to see the effect immediately in the plot/
 # animation below -- this is the same theta learning.train/eval_batch
 # consume, just visualized instead of trained against. ──────────────────────
-ego_s = 50.0   # [m] where ego (and theta) is anchored -- also this script's
-               # only non-theta scenario knob, since it's about where in
-               # the road geometry to look, not the traffic itself.
 theta = ScenarioConfig(
     seed                   = seed if seed is not None else int(np.random.SeedSequence().generate_state(1)[0]),
     road_mu                = 1.0,     # [-] road friction
@@ -49,21 +55,11 @@ theta = ScenarioConfig(
                                    relative_speed = 0.0, lane_offset = 1, relative_s = 0.0),
 )
 
-lane_num = 3
-dt       = 0.05   # [s]
-duration = 20.0   # [s]
-
-mobil_params = MobilParams(threshold = MobilParams().threshold / theta.lane_change_tendency)
-MAX_BRAKING = 8.0   # [m/s^2] physical actuation limit clamped onto IDM's raw output
-LANE_CHANGE_COOLDOWN = 1.0   # [s] a car may not start another lane change this
-                             # soon after its last one committed -- damps MOBIL
-                             # lane-hopping back and forth right after a merge.
-CRASH_BLEED_K = 1.0   # [-] post-crash deceleration = k * road.mu * g -- see model.collision
-
 car_width = CAR_WIDTH   # [m] (CAR_LENGTH/CAR_WIDTH come from initialization.traffic_init,
                         # shared with the gap calculations and collision test so plotted
                         # bodies match spacing)
 
+EGO_COLOR = "black"
 _BEHAVIOUR_COLOR = {1: "seagreen", 2: "steelblue", 3: "firebrick"}   # conservative/moderate/aggressive
 _ROLE_COLOR = {"front": "orange", "rear": "purple", "blocker": "cyan"}   # theta's 3 critical actors
 _CRASHED_COLOR = "dimgray"
@@ -74,37 +70,6 @@ def _color_for(agent, crashed: bool, role_by_car_id: dict) -> str:
         return _CRASHED_COLOR
     role = role_by_car_id.get(agent.car.car_id)
     return _ROLE_COLOR.get(role, _BEHAVIOUR_COLOR[agent.car.behaviour])
-
-
-road = Road(s_max = 500, kappa_max = theta.road_kappa_max, L_clothoid = 60,
-            mu = theta.road_mu, lane_num = lane_num)
-
-ego_lane = lane_num // 2
-scenario_seed = derive_seed(theta.seed, worker_rank = 0, episode_index = 0)
-rng = np.random.default_rng(scenario_seed)
-agents, ego_v0, realized = generate_scenario(theta, road, ego_s = ego_s, ego_lane = ego_lane, rng = rng,
-                                              worker_rank = 0, episode_index = 0, scenario_seed = scenario_seed)
-# agents[0]/[1]/[2] are always front/rear/blocker (see generate_scenario) --
-# used to color theta's 3 critical actors distinctly from background traffic.
-role_by_car_id = {agents[0].car.car_id: "front", agents[1].car.car_id: "rear", agents[2].car.car_id: "blocker"}
-
-print(f"theta realized: ego_v0={ego_v0:.1f} m/s | "
-      f"front: gap={theta.front.gap}m, v={theta.front.relative_speed:+.1f} rel, {theta.front.behavior} | "
-      f"rear: gap={theta.rear.gap}m, v={theta.rear.relative_speed:+.1f} rel, {theta.rear.behavior} | "
-      f"blocker: lane{theta.blocker.lane_offset:+d}, ds={theta.blocker.relative_s:+.1f}m, "
-      f"v={theta.blocker.relative_speed:+.1f} rel, {theta.blocker.behavior}")
-
-# ── Ego -- stationary placeholder, no controller yet: it never steps, so
-# its (x, y, heading) are computed once here rather than every frame. Not
-# a TrafficAgent -- it doesn't run IDM/MOBIL and isn't in `agents`, so it's
-# not yet visible to surr cars' leader lookups or collision detection.
-EGO_COLOR = "black"
-ego_car = Car(state = CarState(s = ego_s, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
-              vehicle_params = VehicleParameters())
-_ego_lane_obj = road.lanes[ego_car.state.lane]
-_ego_backbone_e_y = -_ego_lane_obj.offset + ego_car.state.e_y   # type: ignore
-ego_x, ego_y, ego_heading = road.frenet_to_global(ego_car.state.s, _ego_backbone_e_y, ego_car.state.e_psi)
-ego_car.state.x, ego_car.state.y, ego_car.state.heading = ego_x, ego_y, ego_heading
 
 
 def car_corners(x: float, y: float, heading: float, length: float = CAR_LENGTH, width: float = car_width):
@@ -120,38 +85,94 @@ def car_corners(x: float, y: float, heading: float, length: float = CAR_LENGTH, 
     ]
 
 
-# ── Simulate ──────────────────────────────────────────────────────────────
-# EGO RULE (not yet reachable here): an ego/surr overlap must end the episode
-# via model.collision.ego_overlaps_any, never route through
-# resolve_surr_collisions -- see that function's docstring. Ego above is a
-# stationary placeholder with no controller, so there's nothing driving it
-# into traffic yet; wire this in once it has one (see learning/env.py).
-history = {agent.car.car_id: {"t": [], "x": [], "y": [], "heading": [], "crashed": []} for agent in agents}
+# ── Build the scenario via the real environment (not a manual sim loop) --
+# theta is realized exactly the way learning.train/learning.eval_batch
+# would realize it, and ego is stepped through EgoTrafficEnv.step() just
+# like a trained policy would drive it, rather than sitting still. ─────────
+env = EgoTrafficEnv(scenario_config = theta, mode = "fixed", worker_rank = 0)
+obs, info = env.reset()
+realized = env.get_realized_scenario()
 
-n_steps = int(duration / dt)
-for step in range(n_steps):
-    t = step * dt
+# env.agents[0]/[1]/[2] are always front/rear/blocker (see generate_scenario)
+# -- used to color theta's 3 critical actors distinctly from background traffic.
+role_by_car_id = {env.agents[0].car.car_id: "front", env.agents[1].car.car_id: "rear",
+                   env.agents[2].car.car_id: "blocker"}
 
-    step_surr_agents(agents, road, t, dt, mobil_params = mobil_params, lane_num = lane_num,
-                      max_braking = MAX_BRAKING, lane_change_cooldown = LANE_CHANGE_COOLDOWN,
-                      crash_bleed_k = CRASH_BLEED_K)
+print(f"theta realized: ego_v0={realized['ego']['v_x']:.1f} m/s | "
+      f"front: gap={theta.front.gap}m, v={theta.front.relative_speed:+.1f} rel, {theta.front.behavior} | "
+      f"rear: gap={theta.rear.gap}m, v={theta.rear.relative_speed:+.1f} rel, {theta.rear.behavior} | "
+      f"blocker: lane{theta.blocker.lane_offset:+d}, ds={theta.blocker.relative_s:+.1f}m, "
+      f"v={theta.blocker.relative_speed:+.1f} rel, {theta.blocker.behavior}")
 
-    for agent in agents:
+model = None
+if model_path is not None:
+    if PPO is None:
+        print("stable_baselines3 isn't installed -- falling back to a straight, constant-speed ego controller.")
+    else:
+        try:
+            model = PPO.load(model_path)
+            print(f"ego driven by trained policy: {model_path}")
+        except FileNotFoundError:
+            print(f"No trained model found at {model_path!r} -- falling back to a straight, constant-speed "
+                  f"ego controller. Train one with `python -m learning.train --scenario-config ...`.")
+
+# A constant action that unscales to (accel=0, delta=0) -- see
+# learning.env._unscale_action's linear map -- i.e. "hold current speed,
+# drive straight", used only when no trained policy is available.
+_CRUISE_ACTION = np.array([2.0 * (0.0 - ACCEL_MIN) / (ACCEL_MAX - ACCEL_MIN) - 1.0, 0.0], dtype = np.float32)
+
+
+def _ego_action(obs: np.ndarray) -> np.ndarray:
+    if model is not None:
+        action, _ = model.predict(obs, deterministic = True)
+        return action
+    return _CRUISE_ACTION
+
+
+# ── Simulate: step ego through the environment (drives itself each frame,
+# same as learning.eval.py) while surr traffic runs its usual IDM/MOBIL. ──
+history = {agent.car.car_id: {"x": [], "y": [], "heading": [], "crashed": []} for agent in env.agents}
+ego_history = {"x": [], "y": [], "heading": []}
+
+
+def record():
+    for agent in env.agents:
         h = history[agent.car.car_id]
-        h["t"].append(t)
         h["x"].append(agent.car.state.x)
         h["y"].append(agent.car.state.y)
         h["heading"].append(agent.car.state.heading)
         h["crashed"].append(agent.crashed)
+    ego_history["x"].append(env.ego_car.state.x)
+    ego_history["y"].append(env.ego_car.state.y)
+    ego_history["heading"].append(env.ego_car.state.heading)
+
+
+# No frame 0 here: right after reset(), surr cars' x/y/heading haven't been
+# computed yet (that only happens inside step_surr_agents, called from
+# env.step()) -- so the first recorded frame is post-first-step.
+terminated = truncated = False
+outcome = "reached the time horizon safely"
+step_i = 0
+while not (terminated or truncated) and step_i < MAX_STEPS:
+    obs, reward, terminated, truncated, info = env.step(_ego_action(obs))
+    record()
+    step_i += 1
+    if terminated:
+        outcome = "rolled over" if info["rolled_over"] else "collided"
+
+n_frames = len(ego_history["x"])
+print(f"Episode ended after {n_frames} steps ({n_frames * DT:.2f}s) -- outcome: {outcome}")
 
 # ── Figure: road + all cars ─────────────────────────────────────────────────
+road = env.road
 fig, ax = plt.subplots(figsize = (18, 4))
 
 first, last = road.lanes[0], road.lanes[-1]
-edge_low_x  = first.x - (first.width / 2) * np.sin(first.heading)   # type: ignore
-edge_low_y  = first.y - (first.width / 2) * np.cos(first.heading)   # type: ignore
-edge_high_x = last.x  + (last.width  / 2) * np.sin(last.heading)    # type: ignore
-edge_high_y = last.y  + (last.width  / 2) * np.cos(last.heading)    # type: ignore
+# road.offset_curve, not a naive per-point (sin, cos) shift off first/last's
+# own centreline -- that drifts and permanently narrows the plotted road
+# after a curve (see Road.offset_curve's docstring).
+edge_low_x,  edge_low_y  = road.offset_curve(first.offset - first.width / 2)   # type: ignore
+edge_high_x, edge_high_y = road.offset_curve(last.offset  + last.width  / 2)   # type: ignore
 poly_x = np.concatenate([edge_low_x, edge_high_x[::-1]])
 poly_y = np.concatenate([edge_low_y, edge_high_y[::-1]])
 
@@ -159,39 +180,40 @@ ax.set_facecolor("#e3efe0")
 ax.fill(poly_x, poly_y, color = "white", zorder = 1)
 ax.plot(edge_low_x,  edge_low_y,  color = "dimgray", linewidth = 1.2, zorder = 2)
 ax.plot(edge_high_x, edge_high_y, color = "dimgray", linewidth = 1.2, zorder = 2)
-for l in range(lane_num - 1):
+for l in range(LANE_NUM - 1):
     div_x = (road.lanes[l].x + road.lanes[l + 1].x) / 2  # type: ignore
     div_y = (road.lanes[l].y + road.lanes[l + 1].y) / 2  # type: ignore
     ax.plot(div_x, div_y, linestyle = "dashed", color = "dimgray", linewidth = 1.5, zorder = 3)
 for lane in road.lanes:
     ax.plot(lane.x, lane.y, linestyle = "dotted", color = "goldenrod", linewidth = 1.5, zorder = 4)  # type: ignore
 
-s_vals = [agent.car.state.s for agent in agents]
-ax.set_xlim(0, 500)
+ax.set_xlim(0, road.s_max)
 ax.set_ylim(-15, 15)
 ax.set_aspect('equal')
-ax.set_title(f"Traffic ({len(agents)} cars + stationary ego, theta.seed={theta.seed}) -- "
+ego_driver = f"policy ({model_path})" if model is not None else "cruise (no trained policy)"
+ax.set_title(f"Traffic ({len(env.agents)} cars + ego, theta.seed={theta.seed}, ego={ego_driver}) -- "
              f"green=conservative, blue=moderate, red=aggressive, "
-             f"orange=front, purple=rear, cyan=blocker, {_CRASHED_COLOR}=crashed, {EGO_COLOR}=ego")
-
-ego_patch = Polygon(car_corners(ego_x, ego_y, ego_heading), closed = True,
-                     facecolor = EGO_COLOR, edgecolor = "black", zorder = 7)
-ax.add_patch(ego_patch)
+             f"orange=front, purple=rear, cyan=blocker, {_CRASHED_COLOR}=crashed, {EGO_COLOR}=ego -- "
+             f"outcome: {outcome}")
 
 if mode == "plot":
-    for agent in agents:
+    for agent in env.agents:
         h = history[agent.car.car_id]
         color = _color_for(agent, agent.crashed, role_by_car_id)
         ax.plot(h["x"], h["y"], color = color, linewidth = 1.0, alpha = 0.5, zorder = 5)
         corners = car_corners(h["x"][-1], h["y"][-1], h["heading"][-1])
         ax.add_patch(Polygon(corners, closed = True, facecolor = color,
                               edgecolor = "black", alpha = 0.85, zorder = 6))
+    ax.plot(ego_history["x"], ego_history["y"], color = EGO_COLOR, linewidth = 1.0, alpha = 0.5, zorder = 5)
+    ego_corners = car_corners(ego_history["x"][-1], ego_history["y"][-1], ego_history["heading"][-1])
+    ax.add_patch(Polygon(ego_corners, closed = True, facecolor = EGO_COLOR,
+                          edgecolor = "black", alpha = 0.85, zorder = 7))
     plt.tight_layout()
     plt.show()
 
 elif mode == "animation":
     patches = {}
-    for agent in agents:
+    for agent in env.agents:
         h = history[agent.car.car_id]
         color = _color_for(agent, h["crashed"][0], role_by_car_id)
         patch = Polygon(car_corners(h["x"][0], h["y"][0], h["heading"][0]),
@@ -199,14 +221,19 @@ elif mode == "animation":
         ax.add_patch(patch)
         patches[agent.car.car_id] = patch
 
+    ego_patch = Polygon(car_corners(ego_history["x"][0], ego_history["y"][0], ego_history["heading"][0]),
+                         closed = True, facecolor = EGO_COLOR, edgecolor = "black", zorder = 7)
+    ax.add_patch(ego_patch)
+
     def update(i):
-        for agent in agents:
+        for agent in env.agents:
             h = history[agent.car.car_id]
             patches[agent.car.car_id].set_xy(car_corners(h["x"][i], h["y"][i], h["heading"][i]))
             patches[agent.car.car_id].set_facecolor(_color_for(agent, h["crashed"][i], role_by_car_id))
-        return list(patches.values())
+        ego_patch.set_xy(car_corners(ego_history["x"][i], ego_history["y"][i], ego_history["heading"][i]))
+        return list(patches.values()) + [ego_patch]
 
-    ani = FuncAnimation(fig, update, frames = n_steps, interval = dt * 1000, blit = False)
+    ani = FuncAnimation(fig, update, frames = n_frames, interval = DT * 1000, blit = False)
     plt.tight_layout()
     plt.show()
 
