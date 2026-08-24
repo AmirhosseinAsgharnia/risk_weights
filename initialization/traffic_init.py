@@ -85,20 +85,22 @@ def generate_traffic(
         speed_ranges: dict[int, tuple[float, float]] = SPEED_RANGES,
         behaviours: tuple[int, ...] = (1, 2, 3),
         min_gap: float = 6.0,
-        ego_speed_range: tuple[float, float] = (15.0, 25.0),
+        ego_speed_std: float = 2.5,
         ego_gap_multiplier: float = 1.5,
         max_place_attempts: int = 200,
         rng: np.random.Generator | None = None,
 ) -> tuple[list[TrafficAgent], float]:
     """
     Place n_cars around ego_s. Ego itself is treated as a vehicle here too,
-    not just a reference point: its own initial speed ego_v0 ~
-    U(ego_speed_range) is drawn first (the same rng.uniform mechanism, and
-    the same point in the draw sequence, as "vehicle zero" -- before any
-    surr car), and every surr car keeps at least min_gap *
+    not just a reference point: every surr car keeps at least min_gap *
     ego_gap_multiplier from ego_s -- a bigger cushion than the min_gap surr
     cars keep from each other, since ego needs room to react rather than
-    just avoid a spawn that's already guaranteed to collide.
+    just avoid a spawn that's already guaranteed to collide. Ego's own
+    initial speed ego_v0 ~ Normal(mean(realized surr v_x), ego_speed_std)
+    -- ego is the road speed, not an independently-configured quantity
+    (mirrors learning.scenario.generate_scenario's same treatment) -- so
+    it's drawn *last*, once every surr car's actual (post-steady-state)
+    speed is known to average.
 
     Each surr car gets an independent random lane, longitudinal offset d ~
     U(d_range) (so s = ego_s + d, resampled up to max_place_attempts times
@@ -116,14 +118,14 @@ def generate_traffic(
     it landed in: within each lane, cars are resolved front-to-back
     (largest s first) so every car's leader has an already-known steady-
     state speed by the time it's this car's turn; the front-most car in
-    each lane (no leader) gets its own v0 outright. ego_v0 is left as drawn
-    -- ego has no IDM/steady-state concept, it's whatever controls it.
+    each lane (no leader) gets its own v0 outright. ego has no IDM/steady-
+    state concept itself -- see ego_speed_std above for how its speed is
+    set instead.
 
     Returns (agents, ego_v0).
     """
     rng = rng or np.random.default_rng()
 
-    ego_v0 = float(rng.uniform(*ego_speed_range))
     ego_min_gap = min_gap * ego_gap_multiplier
 
     cars: list[Car] = []
@@ -163,6 +165,9 @@ def generate_traffic(
             v_ss = steady_state_speed(v0, gap, v_leader, idm_params)
             car.state.v_x = v_ss
             leader_s, leader_v = car.state.s, v_ss
+
+    road_flow_speed = sum(c.state.v_x for c in cars) / len(cars) if cars else 0.0
+    ego_v0 = max(0.0, float(rng.normal(road_flow_speed, ego_speed_std)))
 
     agents = [
         TrafficAgent(car=car, v0=v0, target_lane=car.state.lane)
