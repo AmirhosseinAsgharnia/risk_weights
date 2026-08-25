@@ -66,16 +66,21 @@ DELTA_MAX = 0.5    # [rad] front-wheel steering lock, ~29 deg
 
 # ── Reward ───────────────────────────────────────────────────────────────
 # Per-step shaping is proportional to forward progress (delta-s this step);
-# NOMINAL_SPEED/EPISODE_SECONDS calibrate PROGRESS_REWARD_SCALE so a full,
-# clean, roughly-nominal-speed episode accumulates shaping reward on the
-# same order as the terminal survival bonus (~1.0) -- if shaping dominated
-# the return, the agent would have little incentive to actually avoid the
-# terminal states, and if it were negligible it wouldn't shape anything.
-# COLLISION_PENALTY/ROLLOVER_PENALTY are symmetric to SURVIVAL_REWARD --
-# without them, a crash only cost forgone future reward (an indirect signal
-# that depends on gamma/horizon), not a direct one.
+# NOMINAL_SPEED/EPISODE_SECONDS calibrate a *base* scale so a full, clean,
+# roughly-nominal-speed episode's shaping totals ~1.0 on its own, on the
+# same order as SURVIVAL_REWARD. PROGRESS_REWARD_BOOST multiplies that
+# further: PPO's gamma=0.99 only "sees" ~1/(1-gamma) = 100 steps (~5s) of
+# future reward at any moment, so within that effective horizon the
+# *un*boosted shaping (~0.25 over 5s at NOMINAL_SPEED) is dwarfed by a
+# single COLLISION_PENALTY/ROLLOVER_PENALTY (1.0) landing just a few
+# seconds out -- an under-trained policy can find "stop and never risk it"
+# locally optimal (observed: ego progress stalling to ~0). Boosting shaping
+# brings discounted progress back into the same ballpark as the terminal
+# penalties within that horizon, so driving forward is worth the risk once
+# the policy is actually reasonably safe.
 NOMINAL_SPEED = 20.0   # [m/s] rough cruising speed used only for this calibration
-PROGRESS_REWARD_SCALE = 1.0 / (NOMINAL_SPEED * EPISODE_SECONDS)
+PROGRESS_REWARD_BOOST = 4.0
+PROGRESS_REWARD_SCALE = PROGRESS_REWARD_BOOST / (NOMINAL_SPEED * EPISODE_SECONDS)
 SURVIVAL_REWARD = 1.0     # added once, at truncation (reaching EPISODE_SECONDS unharmed)
 COLLISION_PENALTY = 1.0   # subtracted once, at collision
 ROLLOVER_PENALTY = 1.0    # subtracted once, at rollover
