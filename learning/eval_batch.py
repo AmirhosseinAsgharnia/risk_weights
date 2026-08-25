@@ -67,11 +67,12 @@ def run_batch(model: PPO, env: EgoTrafficEnv, episodes: int, fail_dir: str | Non
             step_idx += 1
 
         progress = env.ego_car.state.s - EGO_S0
-        failed = bool(info["collided"] or info["rolled_over"])
+        failed = bool(info["collided"] or info["rolled_over"] or info["off_road"])
         results.append({
             "episode": ep,
             "collided": bool(info["collided"]),
             "rolled_over": bool(info["rolled_over"]),
+            "off_road": bool(info["off_road"]),
             "survived": bool(truncated),
             "steps": step_idx,
             "progress": float(progress),
@@ -94,6 +95,7 @@ def summarize(results: list[dict], mode: str) -> dict:
     n = len(results)
     n_collisions = sum(r["collided"] for r in results)
     n_rollovers = sum(r["rolled_over"] for r in results)
+    n_offroad = sum(r["off_road"] for r in results)
     n_safe = sum(r["survived"] for r in results)
     progress = [r["progress"] for r in results]
 
@@ -101,6 +103,7 @@ def summarize(results: list[dict], mode: str) -> dict:
         "n_episodes": n,
         "n_collisions": n_collisions,
         "n_rollovers": n_rollovers,
+        "n_offroad": n_offroad,
         "n_safe_completions": n_safe,
         "success_rate": n_safe / n if n else 0.0,
         "mean_progress": sum(progress) / n if n else 0.0,

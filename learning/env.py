@@ -70,20 +70,36 @@ DELTA_MAX = 0.5    # [rad] front-wheel steering lock, ~29 deg
 # roughly-nominal-speed episode's shaping totals ~1.0 on its own, on the
 # same order as SURVIVAL_REWARD. PROGRESS_REWARD_BOOST multiplies that
 # further: PPO's gamma=0.99 only "sees" ~1/(1-gamma) = 100 steps (~5s) of
-# future reward at any moment, so within that effective horizon the
-# *un*boosted shaping (~0.25 over 5s at NOMINAL_SPEED) is dwarfed by a
-# single COLLISION_PENALTY/ROLLOVER_PENALTY (1.0) landing just a few
-# seconds out -- an under-trained policy can find "stop and never risk it"
-# locally optimal (observed: ego progress stalling to ~0). Boosting shaping
-# brings discounted progress back into the same ballpark as the terminal
-# penalties within that horizon, so driving forward is worth the risk once
-# the policy is actually reasonably safe.
+# future reward at any moment, so within that effective horizon shaping
+# needs to clearly outweigh a single terminal penalty (COLLISION_PENALTY/
+# ROLLOVER_PENALTY/OFFROAD_PENALTY, all 1.0) landing just a few seconds
+# out, or an under-trained policy finds "stop and never risk it" locally
+# optimal (observed: ego progress stalling to ~0, never reaching s_max).
+# Boost history: 1 (unboosted) -> 4 -> 10 -> 100, each still observed to
+# undershoot -- at boost=100, discounted progress over that ~5s horizon is
+# ~25x a single terminal penalty, making driving forward the overwhelming
+# favorite as soon as the policy is even moderately safe.
 NOMINAL_SPEED = 20.0   # [m/s] rough cruising speed used only for this calibration
-PROGRESS_REWARD_BOOST = 4.0
+PROGRESS_REWARD_BOOST = 100.0
 PROGRESS_REWARD_SCALE = PROGRESS_REWARD_BOOST / (NOMINAL_SPEED * EPISODE_SECONDS)
-SURVIVAL_REWARD = 1.0     # added once, at truncation (reaching EPISODE_SECONDS unharmed)
-COLLISION_PENALTY = 1.0   # subtracted once, at collision
-ROLLOVER_PENALTY = 1.0    # subtracted once, at rollover
+SURVIVAL_REWARD = 1.0   # added once, at truncation (reaching EPISODE_SECONDS unharmed) -- deliberately
+                        # NOT rescaled with the terminal penalties below: it's a bonus for a good outcome,
+                        # not a cost the agent needs to be scared away from, so it stays on its own small scale.
+# Terminal penalties (collision/rollover/road-departure) must be re-balanced every time
+# PROGRESS_REWARD_BOOST changes, or the ratio between them silently drifts: at boost=100 with these left
+# at the old flat 1.0, discounted progress over PPO's ~5s effective horizon (gamma=0.99) reached ~25x a
+# single penalty -- "crash is basically free" territory (observed: ego stopped avoiding traffic).
+# Pegged here to that same discounted-horizon progress value so a crash costs "one full effective horizon
+# of clean driving" regardless of how PROGRESS_REWARD_BOOST is retuned next.
+_ASSUMED_GAMMA = 0.99   # must match learning.train's PPO(gamma=...) (SB3 default, not overridden there) --
+                        # not importable from here since PPO isn't constructed until train.py.
+_DISCOUNTED_HORIZON_PROGRESS = PROGRESS_REWARD_SCALE * NOMINAL_SPEED * DT / (1.0 - _ASSUMED_GAMMA)
+COLLISION_PENALTY = _DISCOUNTED_HORIZON_PROGRESS   # subtracted once, at collision
+ROLLOVER_PENALTY = _DISCOUNTED_HORIZON_PROGRESS    # subtracted once, at rollover
+OFFROAD_PENALTY = _DISCOUNTED_HORIZON_PROGRESS     # subtracted once, at road departure (ego's body entirely
+                          # off the paved road -- see _ego_off_road; nothing else in the reward penalizes
+                          # drifting off the road, e.g. failing to steer through a curve, so without this
+                          # it's simply never discouraged as long as it doesn't also cause a collision)
 ROLLOVER_PROB_THRESHOLD = 0.5   # P_roll above this counts as "rolled over" this step
 
 # ── Observation normalization (fixed scales, not learned -- see _get_obs) ──
@@ -208,6 +224,13 @@ class EgoTrafficEnv(gym.Env):
             # tendency > 1 => lower threshold => more lane changes (see ScenarioConfig.lane_change_tendency)
             self.mobil_params = MobilParams(threshold = MobilParams().threshold / self.scenario_config.lane_change_tendency)
 
+        # Total paved half-width, symmetric about the backbone (lane offsets
+        # are laid out symmetrically -- see Road.lane_calc) -- used by
+        # _ego_off_road to terminate once ego's body is entirely off the
+        # road, not just out of its current lane. Derived from self.road
+        # rather than hard-coded so it can never drift out of sync with it.
+        self._road_half_width = self.road.lanes[-1].offset + self.road.lanes[-1].width / 2   # type: ignore
+
         self.ego_car = Car(car_id = EGO_CAR_ID,
                             state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
                             vehicle_params = VehicleParameters())
@@ -242,18 +265,21 @@ class EgoTrafficEnv(gym.Env):
 
         collided = self._ego_collided()
         rolled_over = self._ego_rolled_over()
-        terminated = collided or rolled_over
+        off_road = self._ego_off_road()
+        terminated = collided or rolled_over or off_road
         if collided:
             reward -= COLLISION_PENALTY
         if rolled_over:
             reward -= ROLLOVER_PENALTY
+        if off_road:
+            reward -= OFFROAD_PENALTY
 
         truncated = False
         if not terminated and self.step_count >= MAX_STEPS:
             truncated = True
             reward += SURVIVAL_REWARD
 
-        info = {"collided": collided, "rolled_over": rolled_over, "s": self.ego_car.state.s}
+        info = {"collided": collided, "rolled_over": rolled_over, "off_road": off_road, "s": self.ego_car.state.s}
         return self._get_obs(), reward, terminated, truncated, info
 
     def get_realized_scenario(self) -> dict:
@@ -316,6 +342,16 @@ class EgoTrafficEnv(gym.Env):
         p_roll, _ = rollover([RolloverStep(v = state.v_x, delta = state.delta)],
                               vehicle_params = self.ego_car.vehicle_params)
         return p_roll > ROLLOVER_PROB_THRESHOLD
+
+    def _ego_off_road(self) -> bool:
+        """True once ego's body has drifted entirely off the paved road --
+        not just out of its current lane -- in the shared backbone_e_y
+        frame (see _ego_backbone_e_y/_ego_nearest_lane), compared against
+        self._road_half_width (the true outer edge, computed once per
+        reset() from self.road). Wrapped in bool(): both operands are
+        numpy floats, so the raw comparison is numpy.bool_ -- Gymnasium's
+        own env checker requires `terminated` to be a genuine Python bool."""
+        return bool(abs(self._ego_backbone_e_y()) > self._road_half_width)
 
     def _get_obs(self) -> np.ndarray:
         """5 ego features + 3 features per surr car (fixed N_SURR slots,

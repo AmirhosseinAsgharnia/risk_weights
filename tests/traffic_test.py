@@ -158,7 +158,7 @@ while not (terminated or truncated) and step_i < MAX_STEPS:
     record()
     step_i += 1
     if terminated:
-        outcome = "rolled over" if info["rolled_over"] else "collided"
+        outcome = "rolled over" if info["rolled_over"] else "went off-road" if info["off_road"] else "collided"
 
 n_frames = len(ego_history["x"])
 print(f"Episode ended after {n_frames} steps ({n_frames * DT:.2f}s) -- outcome: {outcome}")
