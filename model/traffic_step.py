@@ -8,11 +8,14 @@ one implementation, shared between that visualization script and
 learning/env.py's training environment -- the two must never be able to
 silently diverge.
 
-Ego is out of scope here entirely: step_surr_agents only advances `agents`
-(the surr TrafficAgent list). A caller that also has an ego vehicle must
-step it separately and handle ego/surr overlap itself via
-model.collision.ego_overlaps_any -- never route an ego overlap through
-resolve_surr_collisions (see that function's own docstring).
+Ego is never advanced or lane-changed here -- a caller that has an ego
+vehicle steps it separately, and must handle ego/surr overlap itself via
+model.collision.ego_overlaps_any, never by routing it through
+resolve_surr_collisions (see that function's own docstring: an ego/surr
+overlap ends the episode, it doesn't plastically crash). Passing `ego_car`
+in, though, makes ego VISIBLE to every surr car's own IDM/MOBIL decisions
+(see step_surr_agents) -- without it, surr cars would happily cut directly
+in front of or behind ego with no more regard for it than empty road.
 """
 
 from controllers.idm import idm_accel, IDM_PRESETS
@@ -21,7 +24,7 @@ from controllers.far_near import (
     far_near_curvature_feedforward, FAR_NEAR_PRESETS,
 )
 from controllers.mobil import mobil_decision, MobilParams
-from initialization.traffic_init import CAR_LENGTH
+from initialization.traffic_init import CAR_LENGTH, TrafficAgent
 from model.collision import resolve_surr_collisions, bleed_crashed
 
 
@@ -86,6 +89,7 @@ def step_surr_agents(
         agents, road, t: float, dt: float, *,
         mobil_params: MobilParams,
         lane_num: int,
+        ego_car=None,
         max_braking: float = 8.0,
         lane_change_cooldown: float = 1.0,
         crash_bleed_k: float = 1.0,
@@ -102,7 +106,27 @@ def step_surr_agents(
        (plotting, observation construction) that needs it.
     A CRASHED agent skips 1-5 entirely (see model.collision.bleed_crashed).
     Step 7, once for the whole list: surr-surr collision resolution.
+
+    ego_car: if given, every surr car's leader/follower lookups (step 1's
+    MOBIL incentive/safety check, step 2's IDM car-following) can also
+    land on ego -- wrapped fresh each call in a throwaway TrafficAgent
+    proxy (never itself advanced or lane-changed; ego_car's own caller
+    steps it separately). Ego has no IDM concept of its own (no fixed
+    desired speed/driving style -- it's RL- or user-driven), so the proxy
+    approximates it as a moderate-behaviour car whose "desired speed" is
+    simply whatever ego's current v_x happens to be this step -- good
+    enough for "how hard would the car in ego's spot need to brake",
+    without inventing a persistent style for ego. ego_car must carry a
+    car_id that never collides with a real surr car_id (find_leader/
+    find_follower exclude a car by matching car_id against "itself" --
+    a collision would wrongly hide ego from, or wrongly self-exclude, the
+    surr car that happens to share it).
     """
+    visible_agents = agents
+    if ego_car is not None:
+        ego_agent = TrafficAgent(car=ego_car, v0=ego_car.state.v_x, target_lane=ego_car.state.lane)
+        visible_agents = agents + [ego_agent]
+
     for agent in agents:
         car = agent.car
 
@@ -118,7 +142,7 @@ def step_surr_agents(
                 for candidate in (car.state.lane - 1, car.state.lane + 1):
                     if not (0 <= candidate < lane_num):
                         continue
-                    should_change, incentive = evaluate_mobil(agents, agent, candidate, mobil_params)
+                    should_change, incentive = evaluate_mobil(visible_agents, agent, candidate, mobil_params)
                     if should_change and incentive > best_incentive:
                         best_lane, best_incentive = candidate, incentive
                 if best_lane is not None:
@@ -130,7 +154,7 @@ def step_surr_agents(
             # once it completes). find_leader doesn't filter by crashed
             # status, so a stopped wreck is automatically a valid leader.
             idm_p = IDM_PRESETS[car.behaviour]
-            leader = find_leader(agents, agent.target_lane, car.state.s, car.car_id)
+            leader = find_leader(visible_agents, agent.target_lane, car.state.s, car.car_id)
             accel = _idm_accel_of(car.state, agent.v0, idm_p, leader)
             # idm_accel is deliberately unclamped (see its own docstring) -- a
             # near-zero gap sends (s_star/gap)^2, and so accel, toward -inf.

@@ -51,6 +51,13 @@ ROAD_KWARGS = dict(s_max = 500, kappa_max = 0.005, L_clothoid = 60, mu = 1.0, la
 MAX_BRAKING = 8.0            # [m/s^2] same clamp used on surr IDM in model.traffic_step
 LANE_CHANGE_COOLDOWN = 1.0   # [s] see model.traffic_step
 CRASH_BLEED_K = 1.0          # [-] see model.collision.bleed_crashed
+EGO_CAR_ID = -1   # sentinel car_id, distinct from every surr slot id (0..N_SURR-1 in
+                  # both initialization.traffic_init and learning.scenario) -- required
+                  # now that model.traffic_step.step_surr_agents treats ego as a
+                  # visible leader/follower candidate: find_leader/find_follower
+                  # exclude a car by matching car_id against "itself", so a colliding
+                  # id would wrongly hide ego from, or wrongly self-exclude, whichever
+                  # surr car happened to share it.
 
 # ── Action space: accel in [ACCEL_MIN, ACCEL_MAX], delta in +/-DELTA_MAX ───
 ACCEL_MIN = -8.0   # [m/s^2] matches MAX_BRAKING -- ego can brake as hard as surr cars are clamped to
@@ -64,9 +71,14 @@ DELTA_MAX = 0.5    # [rad] front-wheel steering lock, ~29 deg
 # same order as the terminal survival bonus (~1.0) -- if shaping dominated
 # the return, the agent would have little incentive to actually avoid the
 # terminal states, and if it were negligible it wouldn't shape anything.
+# COLLISION_PENALTY/ROLLOVER_PENALTY are symmetric to SURVIVAL_REWARD --
+# without them, a crash only cost forgone future reward (an indirect signal
+# that depends on gamma/horizon), not a direct one.
 NOMINAL_SPEED = 20.0   # [m/s] rough cruising speed used only for this calibration
 PROGRESS_REWARD_SCALE = 1.0 / (NOMINAL_SPEED * EPISODE_SECONDS)
-SURVIVAL_REWARD = 1.0   # added once, at truncation (reaching EPISODE_SECONDS unharmed)
+SURVIVAL_REWARD = 1.0     # added once, at truncation (reaching EPISODE_SECONDS unharmed)
+COLLISION_PENALTY = 1.0   # subtracted once, at collision
+ROLLOVER_PENALTY = 1.0    # subtracted once, at rollover
 ROLLOVER_PROB_THRESHOLD = 0.5   # P_roll above this counts as "rolled over" this step
 
 # ── Observation normalization (fixed scales, not learned -- see _get_obs) ──
@@ -191,7 +203,8 @@ class EgoTrafficEnv(gym.Env):
             # tendency > 1 => lower threshold => more lane changes (see ScenarioConfig.lane_change_tendency)
             self.mobil_params = MobilParams(threshold = MobilParams().threshold / self.scenario_config.lane_change_tendency)
 
-        self.ego_car = Car(state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
+        self.ego_car = Car(car_id = EGO_CAR_ID,
+                            state = CarState(s = EGO_S0, e_y = 0.0, e_psi = 0.0, v_x = ego_v0, lane = ego_lane),
                             vehicle_params = VehicleParameters())
         self._update_ego_pose()
 
@@ -211,6 +224,7 @@ class EgoTrafficEnv(gym.Env):
 
         step_surr_agents(self.agents, self.road, self.t, DT,
                           mobil_params = self.mobil_params, lane_num = LANE_NUM,
+                          ego_car = self.ego_car,
                           max_braking = MAX_BRAKING, lane_change_cooldown = LANE_CHANGE_COOLDOWN,
                           crash_bleed_k = CRASH_BLEED_K)
 
@@ -224,6 +238,10 @@ class EgoTrafficEnv(gym.Env):
         collided = self._ego_collided()
         rolled_over = self._ego_rolled_over()
         terminated = collided or rolled_over
+        if collided:
+            reward -= COLLISION_PENALTY
+        if rolled_over:
+            reward -= ROLLOVER_PENALTY
 
         truncated = False
         if not terminated and self.step_count >= MAX_STEPS:

@@ -81,7 +81,7 @@ def main():
             outcome = "rolled over" if info["rolled_over"] else "collided"
 
     n_frames = len(ego_history["x"])
-    print(f"Episode ended after {n_frames - 1} steps ({(n_frames - 1) * DT:.2f}s) -- outcome: {outcome}")
+    print(f"Episode ended after {n_frames} steps ({n_frames * DT:.2f}s) -- outcome: {outcome}")
 
     # ── Figure: road + surr cars + ego ──────────────────────────────────────
     road = env.road
@@ -89,10 +89,11 @@ def main():
     fig, ax = plt.subplots(figsize = (18, 4))
 
     first, last = road.lanes[0], road.lanes[-1]
-    edge_low_x  = first.x - (first.width / 2) * np.sin(first.heading)   # type: ignore
-    edge_low_y  = first.y - (first.width / 2) * np.cos(first.heading)   # type: ignore
-    edge_high_x = last.x  + (last.width  / 2) * np.sin(last.heading)    # type: ignore
-    edge_high_y = last.y  + (last.width  / 2) * np.cos(last.heading)    # type: ignore
+    # road.offset_curve, not a naive per-point (sin, cos) shift off first/last's
+    # own centreline -- that drifts and permanently narrows the plotted road
+    # after a curve (see Road.offset_curve's docstring).
+    edge_low_x,  edge_low_y  = road.offset_curve(first.offset - first.width / 2)   # type: ignore
+    edge_high_x, edge_high_y = road.offset_curve(last.offset  + last.width  / 2)   # type: ignore
     poly_x = np.concatenate([edge_low_x, edge_high_x[::-1]])
     poly_y = np.concatenate([edge_low_y, edge_high_y[::-1]])
 
