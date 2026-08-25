@@ -32,7 +32,7 @@ EgoTrafficEnv's legacy path and any other direct caller.
 """
 
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from model.car.car import Car, CarState
 from model.car.config import VehicleParameters
