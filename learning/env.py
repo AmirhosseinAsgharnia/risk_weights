@@ -100,6 +100,21 @@ OFFROAD_PENALTY = _DISCOUNTED_HORIZON_PROGRESS     # subtracted once, at road de
                           # off the paved road -- see _ego_off_road; nothing else in the reward penalizes
                           # drifting off the road, e.g. failing to steer through a curve, so without this
                           # it's simply never discouraged as long as it doesn't also cause a collision)
+# FINISH_BONUS: the total value of reaching s_max (see _ego_finished), delivered as dense, INSTANTANEOUS
+# potential-based shaping every step (_goal_potential/see step()) rather than as one lump sum on the
+# terminal step. A pure terminal bonus gives zero learning signal until the policy first stumbles into
+# finishing at all -- rare while it's still crash-prone -- so this needed to be dense from step one instead.
+# Phi(s) here is FINISH_BONUS * (fraction of the way from EGO_S0 to s_max), clipped to [0, FINISH_BONUS];
+# each step's reward gets Phi(s') - Phi(s) added (see step() for why this is deliberately UNdiscounted,
+# unlike the textbook gamma*Phi(s')-Phi(s) form) -- this telescopes exactly to Phi(s_final) - Phi(s_initial)
+# over any trajectory length or early termination, i.e. ego collects exactly FINISH_BONUS times whatever
+# fraction of the road it actually covered, paid out incrementally as that progress is made rather than
+# withheld until (and unless) it reaches the very end. Pegged to the same discounted-horizon scale as the
+# terminal penalties (not SURVIVAL_REWARD's small scale) so actually finishing is unambiguously the most
+# valuable thing ego can do, not a rounding error on top of merely surviving.
+# Also note NOMINAL_SPEED * EPISODE_SECONDS = 400m is itself short of the 450m ego actually needs to cover
+# (s_max=500 - EGO_S0=50) -- "nominal" cruising alone was never enough to finish in time.
+FINISH_BONUS = _DISCOUNTED_HORIZON_PROGRESS
 ROLLOVER_PROB_THRESHOLD = 0.5   # P_roll above this counts as "rolled over" this step
 
 # ── Observation normalization (fixed scales, not learned -- see _get_obs) ──
@@ -259,14 +274,29 @@ class EgoTrafficEnv(gym.Env):
         self.t += DT
         self.step_count += 1
 
-        progress = self.ego_car.state.s - self._prev_s
+        s_before = self._prev_s
+        progress = self.ego_car.state.s - s_before
         self._prev_s = self.ego_car.state.s
         reward = PROGRESS_REWARD_SCALE * progress
+        # FINISH_BONUS's potential-based shaping -- instantaneous, every step
+        # (see that constant's own comment for why, and _goal_potential for Phi).
+        # Deliberately UNdiscounted (Phi(s') - Phi(s), no gamma factor): the
+        # textbook gamma*Phi(s') - Phi(s) form only stays well-behaved over
+        # a horizon short relative to 1/(1-gamma) (~100 steps, ~5s) -- over
+        # this env's full 400-step episodes the (1-gamma)*sum(intermediate
+        # Phi) drag term dominates and drives the *total* shaping negative
+        # for any realistic (non-suicidally-fast) crossing, the opposite of
+        # the intended effect (verified numerically before settling on
+        # this). The undiscounted form telescopes exactly to
+        # Phi(s_final) - Phi(s_initial) with no drag, for any trajectory
+        # length or early termination -- simpler, and correct here.
+        reward += self._goal_potential(self.ego_car.state.s) - self._goal_potential(s_before)
 
         collided = self._ego_collided()
         rolled_over = self._ego_rolled_over()
         off_road = self._ego_off_road()
-        terminated = collided or rolled_over or off_road
+        finished = self._ego_finished()
+        terminated = collided or rolled_over or off_road or finished
         if collided:
             reward -= COLLISION_PENALTY
         if rolled_over:
@@ -279,7 +309,8 @@ class EgoTrafficEnv(gym.Env):
             truncated = True
             reward += SURVIVAL_REWARD
 
-        info = {"collided": collided, "rolled_over": rolled_over, "off_road": off_road, "s": self.ego_car.state.s}
+        info = {"collided": collided, "rolled_over": rolled_over, "off_road": off_road,
+                "finished": finished, "s": self.ego_car.state.s}
         return self._get_obs(), reward, terminated, truncated, info
 
     def get_realized_scenario(self) -> dict:
@@ -352,6 +383,21 @@ class EgoTrafficEnv(gym.Env):
         numpy floats, so the raw comparison is numpy.bool_ -- Gymnasium's
         own env checker requires `terminated` to be a genuine Python bool."""
         return bool(abs(self._ego_backbone_e_y()) > self._road_half_width)
+
+    def _ego_finished(self) -> bool:
+        """True once ego has reached (or passed) the end of the modeled
+        road -- a distinct success condition from merely surviving to
+        MAX_STEPS (see FINISH_BONUS's own comment for why that distinction
+        needed its own reward, not just SURVIVAL_REWARD)."""
+        return bool(self.ego_car.state.s >= self.road.s_max)
+
+    def _goal_potential(self, s: float) -> float:
+        """Phi(s) for FINISH_BONUS's potential-based shaping (see that
+        constant's own comment) -- FINISH_BONUS times how far ego has
+        gotten from EGO_S0 to road.s_max, clipped to [0, FINISH_BONUS] so
+        it saturates rather than extrapolating past either end."""
+        frac = (s - EGO_S0) / (self.road.s_max - EGO_S0)
+        return FINISH_BONUS * float(np.clip(frac, 0.0, 1.0))
 
     def _get_obs(self) -> np.ndarray:
         """5 ego features + 3 features per surr car (fixed N_SURR slots,

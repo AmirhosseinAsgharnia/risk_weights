@@ -68,12 +68,16 @@ def run_batch(model: PPO, env: EgoTrafficEnv, episodes: int, fail_dir: str | Non
 
         progress = env.ego_car.state.s - EGO_S0
         failed = bool(info["collided"] or info["rolled_over"] or info["off_road"])
+        # "survived" = not a failure -- either actually finished the road (a
+        # stronger, distinct outcome, tracked separately below) or merely
+        # ran out the clock unharmed without reaching the end.
         results.append({
             "episode": ep,
             "collided": bool(info["collided"]),
             "rolled_over": bool(info["rolled_over"]),
             "off_road": bool(info["off_road"]),
-            "survived": bool(truncated),
+            "finished": bool(info["finished"]),
+            "survived": bool(truncated or info["finished"]),
             "steps": step_idx,
             "progress": float(progress),
         })
@@ -96,6 +100,7 @@ def summarize(results: list[dict], mode: str) -> dict:
     n_collisions = sum(r["collided"] for r in results)
     n_rollovers = sum(r["rolled_over"] for r in results)
     n_offroad = sum(r["off_road"] for r in results)
+    n_finished = sum(r["finished"] for r in results)
     n_safe = sum(r["survived"] for r in results)
     progress = [r["progress"] for r in results]
 
@@ -104,6 +109,7 @@ def summarize(results: list[dict], mode: str) -> dict:
         "n_collisions": n_collisions,
         "n_rollovers": n_rollovers,
         "n_offroad": n_offroad,
+        "n_finished": n_finished,
         "n_safe_completions": n_safe,
         "success_rate": n_safe / n if n else 0.0,
         "mean_progress": sum(progress) / n if n else 0.0,
