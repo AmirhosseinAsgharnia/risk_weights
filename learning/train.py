@@ -9,20 +9,25 @@ Usage:
                               [--scenario-config PATH --scenario-mode {fixed,distribution}]
                               [--base-seed N] [--ppo-seed N] [--force]
 
---scenario-config expects a JSON-serialized ScenarioConfig (learning.scenario) -- e.g.
-    python -c "import json; from learning.scenario import ScenarioConfig; \
-               json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))"
+--scenario-config expects a JSON-serialized ScenarioConfig (learning.scenario). Both commands
+below are self-contained (run from the repo root, in the project's venv) -- they generate
+scenario.json first if it isn't already there, then train, so they work as a straight
+copy/paste with no separate setup step:
 
-Small validation run -- quick sanity check (a few minutes) that training against a
-fixed scenario still learns and nothing regressed after an env/reward change, before
-committing to a full budget:
+Small validation run -- quick sanity check (a few minutes) that training against a fixed
+scenario still learns and nothing regressed after an env/reward change, before committing
+to a full budget:
+    test -f scenario.json || python -c "import json; from learning.scenario import ScenarioConfig; \
+json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))" && \
     python -m learning.train --timesteps 20000 --n-envs 4 --out learning/ppo_ego_smoke \
                               --scenario-config scenario.json --scenario-mode fixed \
                               --ppo-seed 0 --force
 
 Big run -- the real training budget, once the small run looks healthy. Repeat with a
-different --ppo-seed (same --scenario-config/--out-per-seed) for the "several independent
-PPO seeds" feasibility protocol -- see learning.eval_batch:
+different --ppo-seed (and --out) for the "several independent PPO seeds" feasibility
+protocol -- see learning.eval_batch:
+    test -f scenario.json || python -c "import json; from learning.scenario import ScenarioConfig; \
+json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))" && \
     python -m learning.train --timesteps 2000000 --out learning/ppo_ego_seed0 \
                               --scenario-config scenario.json --scenario-mode fixed \
                               --ppo-seed 0 --force
