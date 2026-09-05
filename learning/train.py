@@ -8,6 +8,24 @@ Usage:
     python -m learning.train [--timesteps N] [--n-envs N] [--out PATH] [--device DEVICE]
                               [--scenario-config PATH --scenario-mode {fixed,distribution}]
                               [--base-seed N] [--ppo-seed N] [--force]
+
+--scenario-config expects a JSON-serialized ScenarioConfig (learning.scenario) -- e.g.
+    python -c "import json; from learning.scenario import ScenarioConfig; \
+               json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))"
+
+Small validation run -- quick sanity check (a few minutes) that training against a
+fixed scenario still learns and nothing regressed after an env/reward change, before
+committing to a full budget:
+    python -m learning.train --timesteps 20000 --n-envs 4 --out learning/ppo_ego_smoke \
+                              --scenario-config scenario.json --scenario-mode fixed \
+                              --ppo-seed 0 --force
+
+Big run -- the real training budget, once the small run looks healthy. Repeat with a
+different --ppo-seed (same --scenario-config/--out-per-seed) for the "several independent
+PPO seeds" feasibility protocol -- see learning.eval_batch:
+    python -m learning.train --timesteps 2000000 --out learning/ppo_ego_seed0 \
+                              --scenario-config scenario.json --scenario-mode fixed \
+                              --ppo-seed 0 --force
 """
 
 import argparse
