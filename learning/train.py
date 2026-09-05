@@ -19,7 +19,9 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from learning.env import EgoTrafficEnv, N_SURR, LANE_NUM, DT, EPISODE_SECONDS, MAX_STEPS
+from learning.env import (
+    EgoTrafficEnv, N_SURR, LANE_NUM, DT, EPISODE_SECONDS, MAX_STEPS, MAX_STEERING_RATE, MAX_JERK,
+)
 from learning.scenario import ScenarioConfig
 
 _DEFAULT_N_ENVS = max(1, (os.cpu_count() or 4) - 1)   # leave one core for the main process
@@ -39,7 +41,8 @@ def _build_meta(args, scenario_config: ScenarioConfig | None) -> dict:
         "env_constants": {
             "N_SURR": N_SURR, "LANE_NUM": LANE_NUM, "DT": DT,
             "EPISODE_SECONDS": EPISODE_SECONDS, "MAX_STEPS": MAX_STEPS,
-            "obs_dim": 5 + 3 * N_SURR, "action_dim": 2,
+            "obs_dim": 7 + 5 * N_SURR, "action_dim": 2,
+            "max_steering_rate": MAX_STEERING_RATE, "max_jerk": MAX_JERK,
         },
     }
 

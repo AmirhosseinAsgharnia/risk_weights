@@ -110,6 +110,37 @@ class ScenarioConfig:
     # generate_scenario. front/rear/blocker relative_speed is relative to
     # that drawn value.
 
+    # -- fixed-scenario success goal (see EgoTrafficEnv's success/outcome
+    # definition in learning.env) -- deliberately decoupled from the
+    # modeled road's full length: the 500m road (ROAD_KWARGS) was never
+    # calibrated against max_episode_seconds -- even a full nominal-speed
+    # (20 m/s) cruise for the whole default 20s covers only 400m, short of
+    # the 450m EGO_S0=50 would need to reach s_max=500 -- so treating "hit
+    # s_max" as *this* scenario's goal silently demanded a ~25 m/s average
+    # from the moment ego spawns, before ever accounting for front/rear/
+    # blocker or the road's curve. These three fields let a scenario define
+    # success as "cleared its own critical conflict and kept driving",
+    # rather than "crossed a possibly-unreachable finish line".
+    goal_distance_m: float = 150.0   # [m] past ego's spawn position (EGO_S0) that counts as this
+                                      # scenario's goal being reached -- ASSUMPTION, not derived from a
+                                      # real spec: chosen to clear where front/rear/blocker spawn (within
+                                      # a few tens of meters of ego_s by construction, see
+                                      # _critical_positions/traffic_spread) plus a settling margin, while
+                                      # staying reachable well inside max_episode_seconds at realistic,
+                                      # sub-nominal speed. Override per scenario -- e.g. set to
+                                      # ROAD_KWARGS["s_max"] - EGO_S0 (learning.env) to require full-road
+                                      # completion as before.
+    max_episode_seconds: float = 20.0   # [s] wall-clock episode budget for this scenario -- overrides
+                                         # learning.env.EPISODE_SECONDS when this ScenarioConfig is used.
+    min_progress_m: float = 50.0   # [m] a timeout (reaching max_episode_seconds unharmed without
+                                    # reaching goal_distance_m) only earns EgoTrafficEnv's SURVIVAL_REWARD
+                                    # if net forward progress was at least this much -- otherwise idling
+                                    # or crawling for the full episode earns nothing, so "stop and never
+                                    # risk it" can't out-earn a genuine (if unsuccessful) attempt. Purely a
+                                    # training-reward knob -- never affects `success` itself (see
+                                    # EgoTrafficEnv.step's outcome/success separation). ASSUMPTION, not
+                                    # derived from a spec.
+
     # -- critical actors --
     front: CriticalActorConfig = field(
         default_factory=lambda: CriticalActorConfig(role="front", gap=30.0))
@@ -219,6 +250,12 @@ def validate_scenario(cfg: ScenarioConfig, lane_num: int, ego_lane: int, ego_s: 
         raise ScenarioConfigError(f"road_mu must be > 0, got {cfg.road_mu!r}")
     if cfg.road_kappa_max < 0:
         raise ScenarioConfigError(f"road_kappa_max must be >= 0, got {cfg.road_kappa_max!r}")
+    if cfg.goal_distance_m <= 0:
+        raise ScenarioConfigError(f"goal_distance_m must be > 0, got {cfg.goal_distance_m!r}")
+    if cfg.max_episode_seconds <= 0:
+        raise ScenarioConfigError(f"max_episode_seconds must be > 0, got {cfg.max_episode_seconds!r}")
+    if cfg.min_progress_m < 0:
+        raise ScenarioConfigError(f"min_progress_m must be >= 0, got {cfg.min_progress_m!r}")
 
     # No initial overlap: ego vs. each critical actor, and critical actors
     # vs. each other -- same AABB test model.collision.bodies_overlap uses

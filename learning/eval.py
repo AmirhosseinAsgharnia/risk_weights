@@ -78,7 +78,7 @@ def main():
         obs, reward, terminated, truncated, info = env.step(action)
         record()
         if terminated:
-            outcome = ("finished the road" if info["finished"] else
+            outcome = ("reached the scenario's goal" if info["finished"] else
                        "rolled over" if info["rolled_over"] else
                        "went off-road" if info["off_road"] else "collided")
 
