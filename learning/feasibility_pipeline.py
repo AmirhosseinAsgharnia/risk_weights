@@ -33,6 +33,18 @@ Usage:
         --blocker-side 1 --surrogate-out artifacts/feasibility/surrogates/cutin_side1.joblib
 """
 
+import os
+
+# Must happen before numpy/torch/scipy are imported anywhere in this process -- OpenBLAS/MKL (numpy's
+# own backend, separate from torch.set_num_threads()'s own effect in learning.feasibility_train_one)
+# reads these at first import/init and locks in its thread count then, not when a worker later calls
+# any per-job setting. ProcessPoolExecutor's workers fork from THIS process on Linux, inheriting
+# whatever was already initialized here pre-fork -- so setting this only inside a worker, after fork,
+# would be too late. Without this, numpy's own BLAS calls could still spin up threads across every
+# core in EVERY concurrent process, on top of (not fixed by) the torch_threads guard elsewhere.
+for _env_var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_env_var, "1")
+
 import argparse
 import dataclasses
 import json

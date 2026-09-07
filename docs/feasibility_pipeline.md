@@ -4,11 +4,11 @@
 integration), **Runner A** (single-scenario train/evaluate,
 `learning/feasibility_train_one.py`), and **Runner B** (the cutin-database +
 surrogate pipeline, `learning/feasibility_pipeline.py`) are all built and
-tested (87/87 tests passing). Runner B is validated end to end (pilot,
-resumable `run`, `fit-only`) on tiny synthetic budgets — it has not yet been
-run for a real campaign on the target 32-core machine. Runner C (compare one
-theta's empirical vs. surrogate probability) is the one piece still not
-built.
+tested (87/87 tests passing). Runner B's `pilot` mode has now been run for
+real on the target 32-core / RTX 5070 machine (`abl-drivsim-iii`) — see
+§3's measured numbers below; a full `run` campaign hasn't been launched
+there yet. Runner C (compare one theta's empirical vs. surrogate
+probability) is the one piece still not built.
 
 | Case | Command exists? |
 |---|---|
@@ -110,7 +110,7 @@ python -m learning.feasibility_pipeline --mode pilot --scenario-family cutin \
 #     that already has a result (see "Resuming" below).
 python -m learning.feasibility_pipeline --mode run --scenario-family cutin \
     --blocker-side 1 --n-thetas 24 --sampling-seed 0 \
-    --concurrency 6 --n-envs 4 --timesteps 2000000 --episodes 100
+    --concurrency 8 --n-envs 4 --timesteps 2000000 --episodes 100
 
 # 3c. Fit the surrogate on whatever's in the dataset so far.
 python -m learning.feasibility_pipeline --mode fit-only --scenario-family cutin \
@@ -126,11 +126,36 @@ decision that the two sides are separate experimental strata.
 `MlpPolicy` over this plain NumPy/Python physics environment is CPU-bound
 end to end — putting the network on a GPU adds transfer overhead for no
 benefit (the same warning SB3 prints if you pass `--device cuda`). Every job
-in this pipeline runs on CPU. The real lever is how many *cores* go to one
-job's `--n-envs` vs. how many *scenarios* train **concurrently** — `pilot`
+in this pipeline runs on CPU (`--device cpu`, the default) with PyTorch/BLAS
+restricted to 1 thread per process (`--torch-threads 1`, also the default)
+-- both matter, and were bugs caught by actually running this on real
+hardware: without the CPU default, concurrent jobs fight over one shared
+GPU; without the thread restriction, every process's own tensor math
+independently tries to claim every core, so concurrent jobs starve each
+other even on CPU. The real lever is how many *cores* go to one job's
+`--n-envs` vs. how many *scenarios* train **concurrently** -- `pilot`
 measures scenarios/hour at a few concurrency levels on your actual hardware
-and tells you which to use for step 3b's `--concurrency`, rather than
-assuming more concurrency (or more envs per job) is automatically better.
+and tells you which to use for step 3b's `--concurrency`.
+
+**Measured on `abl-drivsim-iii` (32 cores, RTX 5070), `--pilot-envs-per-job 4`:**
+
+| Concurrency | Scenarios/hour | Environment workers (concurrency x 4) |
+|---:|---:|---:|
+| 1  |  268.6 |  4 |
+| 2  |  413.0 |  8 |
+| 4  |  632.5 | 16 |
+| 8  |  932.3 | 32 (= physical core count) |
+| 16 | 1079.7 | 64 (2x oversubscribed) |
+
+`pilot` itself picks the raw-highest number (16 here), but that's only a
+53-second burst -- at 64 environment-worker processes plus 16 main
+processes (~80 total) on 32 cores, a real multi-hour campaign might not
+hold up as cleanly (memory pressure, disk contention when several jobs
+checkpoint at once). `concurrency=8` sits at exactly the physical core
+count and captured most of the gain (632 -> 932/hr was the biggest single
+jump; 932 -> 1080/hr was much smaller) -- the safer choice for a long run,
+which is what step 3b above uses. Use `--concurrency 16` instead if you'd
+rather chase the extra ~16% and keep an eye on memory while it runs.
 
 **Resuming**: every worker durably writes its own result file under
 `artifacts/feasibility/evaluations/<family>/side_*/<scenario_id>.result.json`
