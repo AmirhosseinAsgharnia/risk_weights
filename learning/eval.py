@@ -20,7 +20,36 @@ from stable_baselines3 import PPO
 from learning.env import EgoTrafficEnv, DT, Outcome
 from learning.eval_batch import _load_meta
 from learning.scenario import ScenarioConfig
+from learning.feasibility_cutin import CutinConfig, CutinRuntime
+from learning.feasibility_sandwich import SandwichConfig, SandwichRuntime
 from initialization.traffic_init import CAR_LENGTH, CAR_WIDTH
+
+_ARENA_CONFIG_CLASSES = {"cutin": CutinConfig, "sandwich": SandwichConfig}
+_ARENA_RUNTIME_CLASSES = {"cutin": CutinRuntime, "sandwich": SandwichRuntime}
+
+
+def _env_from_meta(meta: dict | None) -> EgoTrafficEnv:
+    """Reconstruct the exact scenario a model was trained on from its
+    .meta.json -- covers both learning.train's ScenarioConfig models and
+    learning.feasibility_train_one's arena (cutin/sandwich) models. Falls
+    back to a fresh fully-random EgoTrafficEnv() only when no meta.json (or
+    an unrecognized one) is found -- see _load_meta's own warning for that
+    case. EgoTrafficEnv(mode="fixed") is used for both known cases so the
+    animation always replays one reproducible realization, regardless of
+    that scenario's own recorded training/realization mode."""
+    if meta is not None and meta.get("scenario_family") is not None:
+        cfg_cls = _ARENA_CONFIG_CLASSES[meta["scenario_family"]]
+        cfg = cfg_cls(blocker_side=meta["blocker_side"], mode=meta["mode"], seed=meta["scenario_seed"],
+                      goal_distance_m=meta["goal_distance_m"], max_episode_seconds=meta["max_episode_seconds"],
+                      min_progress_m=meta["min_progress_m"], **meta["theta"])
+        runtime = _ARENA_RUNTIME_CLASSES[meta["scenario_family"]](cfg)
+        return EgoTrafficEnv(arena=runtime, mode="fixed", worker_rank=0)
+    if meta is not None and meta.get("scenario_config") is not None:
+        # Unchanged from before arena support existed: respects whatever scenario_mode this
+        # ScenarioConfig model actually trained under (fixed or distribution), not hard-coded.
+        scenario_config = ScenarioConfig.from_dict(meta["scenario_config"])
+        return EgoTrafficEnv(scenario_config=scenario_config, mode=meta["scenario_mode"], worker_rank=0)
+    return EgoTrafficEnv()
 
 _OUTCOME_TEXT = {
     Outcome.FINISHED.value: "reached the scenario's goal",
@@ -57,15 +86,11 @@ def main():
 
     model = PPO.load(args.model)
 
-    # Reconstruct the exact scenario this model was trained on (same lookup eval_batch.py uses) --
+    # Reconstruct the exact scenario this model was trained on (see _env_from_meta -- covers both
+    # learning.train's ScenarioConfig models and learning.feasibility_train_one's arena models).
     # EgoTrafficEnv() alone would silently visualize a DIFFERENT (fully-random-traffic) scenario than
     # whatever this policy actually learned to handle.
-    meta = _load_meta(args.model)
-    if meta is not None and meta.get("scenario_config") is not None:
-        scenario_config = ScenarioConfig.from_dict(meta["scenario_config"])
-        env = EgoTrafficEnv(scenario_config = scenario_config, mode = meta["scenario_mode"], worker_rank = 0)
-    else:
-        env = EgoTrafficEnv()
+    env = _env_from_meta(_load_meta(args.model))
     obs, info = env.reset(seed = args.seed)
 
     # Per-agent (and ego) pose history, recorded straight off env internals
