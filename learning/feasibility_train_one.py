@@ -97,7 +97,11 @@ class RunParams:
     timesteps: int = 2_000_000
     n_envs: int = max(1, (os.cpu_count() or 4) - 1)
     ppo_seed: int | None = None
-    device: str = "auto"
+    device: str = "cpu"   # deliberately not SB3's usual "auto": a small MlpPolicy over this plain
+                          # NumPy/Python physics env is CPU-bound end to end (see SB3's own runtime
+                          # warning when this is overridden to "cuda"/"auto" on a GPU machine) --
+                          # "auto" would silently pick CUDA there for no benefit. Override explicitly
+                          # (--device cuda) only to verify that for yourself.
     force: bool = False
     no_early_stop: bool = False
     eval_freq_timesteps: int = 100_000
@@ -109,6 +113,16 @@ class RunParams:
     stochastic: bool = False
     return_rollout_details: bool = False   # see train_and_evaluate's own docstring -- opt-in,
                                             # keeps this file's CLI/meta.json output unchanged by default
+    torch_threads: int = 1   # PyTorch defaults to spinning up threads across every available core for
+                              # its OWN tensor math, regardless of how tiny the network is -- harmless
+                              # for a single job, but ruinous the moment several of these run
+                              # concurrently (learning.feasibility_pipeline): every process then fights
+                              # every other process over the same cores via redundant threading, which
+                              # gets WORSE, not better, as concurrency increases. This network is small
+                              # enough that 1 thread is plenty -- the real parallelism lever here is
+                              # processes (concurrent scenarios) and SubprocVecEnv workers (envs within
+                              # one job), never torch's own intra-op threading. Override only to
+                              # measure the difference for yourself.
 
 
 def _meta_path(out: str) -> str:
@@ -145,6 +159,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
     """
     if params.device not in ("auto", "cpu") and not torch.cuda.is_available():
         raise SystemExit(f"--device {params.device!r} requested but torch.cuda.is_available() is False.")
+
+    torch.set_num_threads(params.torch_threads)   # see RunParams.torch_threads' own comment
 
     theta = cfg.theta()
     resolved = {"scenario_family": scenario_family, "scenario_id": cfg.scenario_id(),
@@ -267,6 +283,11 @@ def main():
     parser.add_argument("--n-envs", type=int, default=RunParams.n_envs)
     parser.add_argument("--ppo-seed", type=int, default=None, help="PPO's own algorithm-level seed.")
     parser.add_argument("--device", type=str, default=RunParams.device)
+    parser.add_argument("--torch-threads", type=int, default=RunParams.torch_threads,
+                         help="PyTorch's own CPU thread count for this process -- see RunParams."
+                              "torch_threads' own comment for why this defaults low (1) rather than "
+                              "letting PyTorch claim every core, which only matters once several of "
+                              "these run concurrently (learning.feasibility_pipeline).")
     parser.add_argument("--out", type=str, required=True)
     parser.add_argument("--force", action="store_true",
                          help="overwrite --out even if its existing .meta.json describes a different theta.")
@@ -300,7 +321,8 @@ def main():
     cfg = _build_config(args)
     params = RunParams(
         out=args.out, timesteps=args.timesteps, n_envs=args.n_envs, ppo_seed=args.ppo_seed,
-        device=args.device, force=args.force, no_early_stop=args.no_early_stop,
+        device=args.device, torch_threads=args.torch_threads, force=args.force,
+        no_early_stop=args.no_early_stop,
         eval_freq_timesteps=args.eval_freq_timesteps, patience_episodes=args.patience_episodes,
         patience=args.patience, min_evals=args.min_evals, episodes=args.episodes,
         eval_seed=args.eval_seed, stochastic=args.stochastic,

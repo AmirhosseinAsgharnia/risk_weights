@@ -106,26 +106,30 @@ def _worker_train_and_evaluate(family: str, cfg, params: RunParams, root: Path) 
 
 def run_pilot(
         family: str, blocker_side: int, concurrencies: list[int], *,
-        envs_per_job: int = 2, timesteps: int = 20_000, device: str = "cpu", root: Path = ARTIFACTS_ROOT,
+        envs_per_job: int = 2, timesteps: int = 20_000, device: str = "cpu",
+        torch_threads: int = RunParams.torch_threads, root: Path = ARTIFACTS_ROOT,
 ) -> list[dict]:
     """Times one throwaway benchmark scenario trained at each candidate
     concurrency level (C jobs at once, envs_per_job each), reports
     scenarios/hour at each, and recommends the best -- never touches the
     real dataset (writes under root/_pilot_bench/, safe to delete after).
     See module docstring: the GPU is deliberately not part of this
-    benchmark by default -- every job runs on CPU unless device= is
-    overridden (RunParams.device otherwise defaults to "auto", which picks
-    CUDA on a GPU machine -- exactly what this benchmark is NOT meant to
-    measure, since concurrent jobs would then contend for one shared GPU
-    instead of exercising the CPU-core-parallelism this whole pipeline is
-    actually built around)."""
+    benchmark by default -- every job runs on CPU (RunParams.device's own
+    default, "cpu" -- see learning.feasibility_train_one) unless device= is
+    explicitly overridden to something else. Concurrent jobs contending for
+    one shared GPU instead of exercising CPU-core-parallelism would measure
+    a completely different thing than what this pipeline is built around,
+    so this is a deliberate default, not an oversight. Likewise
+    torch_threads defaults low (see RunParams.torch_threads) so concurrent
+    jobs don't fight each other over the same cores via PyTorch's own
+    (otherwise all-cores-per-process) CPU threading."""
     bench_dir = root / "_pilot_bench"
     cfg = _BENCHMARK_CONFIGS[family](blocker_side=blocker_side, seed=0, mode="robust")
     reports = []
 
     for concurrency in concurrencies:
         params = RunParams(out="placeholder", timesteps=timesteps, n_envs=envs_per_job,
-                            device=device, no_early_stop=True, episodes=0)
+                            device=device, torch_threads=torch_threads, no_early_stop=True, episodes=0)
         jobs = []
         for i in range(concurrency):
             out = str(bench_dir / f"c{concurrency}_job{i}" / "model")
@@ -254,6 +258,16 @@ def main():
                               "concurrent jobs contending for one shared GPU is not what this "
                               "pipeline's concurrency model assumes. Override only to verify that for "
                               "yourself.")
+    parser.add_argument("--torch-threads", type=int, default=RunParams.torch_threads,
+                         help="PyTorch's own CPU thread count PER JOB -- used by both --mode pilot and "
+                              "--mode run. Defaults low (1, see RunParams.torch_threads) because "
+                              "PyTorch otherwise claims every core for its own tensor math regardless "
+                              "of how tiny this network is: harmless for one job, but with several "
+                              "running concurrently (the whole point of this pipeline) every process "
+                              "then fights every other one over the same cores via redundant "
+                              "threading -- almost certainly why a concurrency level can look SLOWER "
+                              "than running jobs one at a time if this is left at PyTorch's own "
+                              "all-cores default.")
 
     # pilot
     parser.add_argument("--pilot-concurrencies", type=str, default="1,2,4",
@@ -288,12 +302,13 @@ def main():
         concurrencies = [int(c) for c in args.pilot_concurrencies.split(",")]
         run_pilot(args.scenario_family, args.blocker_side, concurrencies,
                   envs_per_job=args.pilot_envs_per_job, timesteps=args.pilot_timesteps,
-                  device=args.device, root=root)
+                  device=args.device, torch_threads=args.torch_threads, root=root)
 
     elif args.mode == "run":
         params_template = RunParams(
             out="placeholder", timesteps=args.timesteps, n_envs=args.n_envs, episodes=args.episodes,
-            device=args.device, eval_freq_timesteps=args.eval_freq_timesteps,
+            device=args.device, torch_threads=args.torch_threads,
+            eval_freq_timesteps=args.eval_freq_timesteps,
             patience_episodes=args.patience_episodes,
             patience=args.patience, min_evals=args.min_evals, no_early_stop=args.no_early_stop,
         )
