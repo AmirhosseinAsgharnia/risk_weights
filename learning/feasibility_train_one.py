@@ -15,6 +15,18 @@ belonging to --scenario-family are actually used -- see THETA_BOUNDS_CUTIN/
 THETA_BOUNDS_SANDWICH for which); anything not passed keeps that family's
 default. The resolved config is always printed before training starts.
 
+--timesteps is an upper bound, not a target: by default this stops training
+early once a held-out evaluation env (a DIFFERENT realization-seed stream
+than training -- never the same episodes PPO is training on) shows no
+improvement in mean return for --patience consecutive evaluations (each
+--eval-freq-timesteps apart, only after --min-evals have happened at all) --
+a deliberately cautious, patience-based rule so one lucky/unlucky evaluation
+can't stop or extend training on its own (see StopTrainingOnNoModelImprovement
+below). Pass --no-early-stop to always run the full --timesteps instead. The
+BEST checkpoint seen (by that held-out mean return) is saved to
+<out>_best/best_model.zip alongside the FINAL checkpoint at <out>.zip -- the
+meta.json records which one <out>.zip actually is and why training ended.
+
 Usage:
     python -m learning.feasibility_train_one --scenario-family cutin \\
         --timesteps 2000000 --n-envs 4 --blocker-side 1 --mode robust \\
@@ -36,6 +48,7 @@ import os
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoModelImprovement
 
 from learning.env import EgoTrafficEnv
 from learning.feasibility_cutin import CutinConfig, CutinRuntime
@@ -88,13 +101,31 @@ def main():
         parser.add_argument(f"--{name.replace('_', '-')}", type=typ, default=None,
                              help=f"theta field '{name}' -- omit to keep this family's default.")
 
-    parser.add_argument("--timesteps", type=int, default=2_000_000)
+    parser.add_argument("--timesteps", type=int, default=2_000_000,
+                         help="upper bound on training -- early stopping (on by default, see "
+                              "--no-early-stop) will typically stop well before this.")
     parser.add_argument("--n-envs", type=int, default=max(1, (os.cpu_count() or 4) - 1))
     parser.add_argument("--ppo-seed", type=int, default=None, help="PPO's own algorithm-level seed.")
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--out", type=str, required=True)
     parser.add_argument("--force", action="store_true",
                          help="overwrite --out even if its existing .meta.json describes a different theta.")
+
+    parser.add_argument("--no-early-stop", action="store_true",
+                         help="disable early stopping -- always train the full --timesteps.")
+    parser.add_argument("--eval-freq-timesteps", type=int, default=100_000,
+                         help="how often (in total env-timesteps, i.e. already accounting for "
+                              "--n-envs) to run a held-out evaluation for the early-stopping check.")
+    parser.add_argument("--patience-episodes", type=int, default=20,
+                         help="episodes per held-out evaluation -- separate from --episodes' own "
+                              "FINAL evaluation after training ends.")
+    parser.add_argument("--patience", type=int, default=5,
+                         help="stop once this many consecutive held-out evaluations show no "
+                              "improvement in mean return.")
+    parser.add_argument("--min-evals", type=int, default=5,
+                         help="never stop early before this many held-out evaluations have happened, "
+                              "regardless of --patience -- guards against stopping on early noise "
+                              "before the policy has had a real chance to improve.")
 
     parser.add_argument("--episodes", type=int, default=100,
                          help="held-out realization seeds to evaluate after training (0 skips evaluation).")
@@ -137,11 +168,34 @@ def main():
 
     vec_env = SubprocVecEnv([make_env(i) for i in range(args.n_envs)])
     model = PPO("MlpPolicy", vec_env, verbose=1, device=args.device, seed=args.ppo_seed)
-    model.learn(total_timesteps=args.timesteps)
+
+    callback = None
+    stop_reason = "reached --timesteps"
+    if not args.no_early_stop:
+        # worker_rank=1_000_000: far outside the training envs' own 0..n_envs-1 range, so
+        # derive_seed's SeedSequence-based stream for this held-out eval env never overlaps the
+        # scenario realizations PPO is actually training on -- a real held-out set, not a relabeled
+        # training episode. mode="distribution" so each periodic eval sees fresh realizations too,
+        # not one repeated fixed episode.
+        early_stop_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=1_000_000)
+        stop_on_plateau = StopTrainingOnNoModelImprovement(
+            max_no_improvement_evals=args.patience, min_evals=args.min_evals, verbose=1)
+        callback = EvalCallback(
+            early_stop_env, callback_after_eval=stop_on_plateau,
+            best_model_save_path=f"{args.out}_best", eval_freq=max(1, args.eval_freq_timesteps // args.n_envs),
+            n_eval_episodes=args.patience_episodes, deterministic=True, verbose=1)
+
+    model.learn(total_timesteps=args.timesteps, callback=callback)
+    if callback is not None and model.num_timesteps < args.timesteps:
+        stop_reason = (f"early stopping: no improvement over {args.patience} held-out evaluations "
+                        f"(each {args.patience_episodes} episodes) after {args.min_evals} minimum evals")
     model.save(args.out)
     vec_env.close()
 
-    meta = {**resolved, "ppo_seed": args.ppo_seed, "timesteps": args.timesteps, "n_envs": args.n_envs}
+    meta = {**resolved, "ppo_seed": args.ppo_seed, "timesteps_budget": args.timesteps,
+            "timesteps_actual": int(model.num_timesteps), "stop_reason": stop_reason,
+            "n_envs": args.n_envs,
+            "best_checkpoint": None if args.no_early_stop else f"{args.out}_best/best_model.zip"}
 
     if args.episodes > 0:
         eval_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=0)
