@@ -106,21 +106,26 @@ def _worker_train_and_evaluate(family: str, cfg, params: RunParams, root: Path) 
 
 def run_pilot(
         family: str, blocker_side: int, concurrencies: list[int], *,
-        envs_per_job: int = 2, timesteps: int = 20_000, root: Path = ARTIFACTS_ROOT,
+        envs_per_job: int = 2, timesteps: int = 20_000, device: str = "cpu", root: Path = ARTIFACTS_ROOT,
 ) -> list[dict]:
     """Times one throwaway benchmark scenario trained at each candidate
     concurrency level (C jobs at once, envs_per_job each), reports
     scenarios/hour at each, and recommends the best -- never touches the
     real dataset (writes under root/_pilot_bench/, safe to delete after).
     See module docstring: the GPU is deliberately not part of this
-    benchmark -- every job runs on CPU."""
+    benchmark by default -- every job runs on CPU unless device= is
+    overridden (RunParams.device otherwise defaults to "auto", which picks
+    CUDA on a GPU machine -- exactly what this benchmark is NOT meant to
+    measure, since concurrent jobs would then contend for one shared GPU
+    instead of exercising the CPU-core-parallelism this whole pipeline is
+    actually built around)."""
     bench_dir = root / "_pilot_bench"
     cfg = _BENCHMARK_CONFIGS[family](blocker_side=blocker_side, seed=0, mode="robust")
     reports = []
 
     for concurrency in concurrencies:
         params = RunParams(out="placeholder", timesteps=timesteps, n_envs=envs_per_job,
-                            no_early_stop=True, episodes=0)
+                            device=device, no_early_stop=True, episodes=0)
         jobs = []
         for i in range(concurrency):
             out = str(bench_dir / f"c{concurrency}_job{i}" / "model")
@@ -242,6 +247,13 @@ def main():
     parser.add_argument("--scenario-family", choices=["cutin", "sandwich"], required=True)
     parser.add_argument("--blocker-side", type=int, choices=[-1, 1], required=True)
     parser.add_argument("--root", type=str, default=str(ARTIFACTS_ROOT))
+    parser.add_argument("--device", type=str, default="cpu",
+                         help="used by both --mode pilot and --mode run -- defaults to \"cpu\" "
+                              "deliberately (NOT RunParams' own \"auto\" default, which would pick "
+                              "CUDA on a GPU machine): every job here is small/CPU-bound, and "
+                              "concurrent jobs contending for one shared GPU is not what this "
+                              "pipeline's concurrency model assumes. Override only to verify that for "
+                              "yourself.")
 
     # pilot
     parser.add_argument("--pilot-concurrencies", type=str, default="1,2,4",
@@ -275,12 +287,14 @@ def main():
     if args.mode == "pilot":
         concurrencies = [int(c) for c in args.pilot_concurrencies.split(",")]
         run_pilot(args.scenario_family, args.blocker_side, concurrencies,
-                  envs_per_job=args.pilot_envs_per_job, timesteps=args.pilot_timesteps, root=root)
+                  envs_per_job=args.pilot_envs_per_job, timesteps=args.pilot_timesteps,
+                  device=args.device, root=root)
 
     elif args.mode == "run":
         params_template = RunParams(
             out="placeholder", timesteps=args.timesteps, n_envs=args.n_envs, episodes=args.episodes,
-            eval_freq_timesteps=args.eval_freq_timesteps, patience_episodes=args.patience_episodes,
+            device=args.device, eval_freq_timesteps=args.eval_freq_timesteps,
+            patience_episodes=args.patience_episodes,
             patience=args.patience, min_evals=args.min_evals, no_early_stop=args.no_early_stop,
         )
         run_campaign(args.scenario_family, args.blocker_side, args.n_thetas, args.sampling_seed,
