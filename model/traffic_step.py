@@ -93,6 +93,7 @@ def step_surr_agents(
         max_braking: float = 8.0,
         lane_change_cooldown: float = 1.0,
         crash_bleed_k: float = 1.0,
+        accel_override: dict | None = None,
 ) -> None:
     """Advance every agent in `agents` by one step of dt, in place.
 
@@ -121,6 +122,16 @@ def step_surr_agents(
     find_follower exclude a car by matching car_id against "itself" --
     a collision would wrongly hide ego from, or wrongly self-exclude, the
     surr car that happens to share it).
+
+    accel_override: optional {car_id: accel [m/s^2]} -- if given and a
+    not-yet-crashed agent's car_id is a key, step 2's IDM-computed accel is
+    replaced by that fixed value before the max_braking clamp (steering/
+    integration/collision-resolution below are all unaffected). None
+    (default) leaves every existing call site's behaviour byte-for-byte
+    unchanged. Exists for feasibility-pipeline scenario families that
+    script one specific agent's longitudinal behaviour (e.g. a prescribed
+    emergency stop) without giving that agent an IDM concept of its own --
+    same idea as ego_car's own proxy above, just for one surr agent instead.
     """
     visible_agents = agents
     if ego_car is not None:
@@ -153,13 +164,16 @@ def step_surr_agents(
             # new lane's traffic stream as soon as a change starts, not just
             # once it completes). find_leader doesn't filter by crashed
             # status, so a stopped wreck is automatically a valid leader.
-            idm_p = IDM_PRESETS[car.behaviour]
-            leader = find_leader(visible_agents, agent.target_lane, car.state.s, car.car_id)
-            accel = _idm_accel_of(car.state, agent.v0, idm_p, leader)
-            # idm_accel is deliberately unclamped (see its own docstring) -- a
-            # near-zero gap sends (s_star/gap)^2, and so accel, toward -inf.
-            # Physical actuation limit, not part of the IDM formula itself.
-            accel = max(accel, -max_braking)
+            if accel_override is not None and car.car_id in accel_override:
+                accel = accel_override[car.car_id]
+            else:
+                idm_p = IDM_PRESETS[car.behaviour]
+                leader = find_leader(visible_agents, agent.target_lane, car.state.s, car.car_id)
+                accel = _idm_accel_of(car.state, agent.v0, idm_p, leader)
+                # idm_accel is deliberately unclamped (see its own docstring) -- a
+                # near-zero gap sends (s_star/gap)^2, and so accel, toward -inf.
+                # Physical actuation limit, not part of the IDM formula itself.
+                accel = max(accel, -max_braking)
 
             # 3. Far-near steering, target ramped from the old lane's centreline
             # to the new one over this car's lane_change_duration.

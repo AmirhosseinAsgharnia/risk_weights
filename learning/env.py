@@ -73,6 +73,8 @@ class Outcome(str, Enum):
 
 # ── Fixed scenario (matches tests/traffic_test.py) ──────────────────────────
 N_SURR = 15
+ARENA_N_SURR = 6   # learning.feasibility_common's six-slot arena families (cutin/sandwich) -- see
+                   # EgoTrafficEnv's `arena` constructor parameter
 LANE_NUM = 3
 EGO_S0 = 50.0
 DT = 0.05
@@ -219,6 +221,7 @@ class EgoTrafficEnv(gym.Env):
             worker_rank: int = 0,
             max_steering_rate: float = MAX_STEERING_RATE,
             max_jerk: float = MAX_JERK,
+            arena=None,
     ):
         """
         scenario_config: if given, every reset() instead realizes this
@@ -265,13 +268,36 @@ class EgoTrafficEnv(gym.Env):
         rationale. Override here (not via ScenarioConfig: these are a
         vehicle/actuator property, not a scenario parameter) if a real
         vehicle spec is available.
+
+        arena: mutually exclusive with scenario_config -- a feasibility-
+        pipeline scenario-family runtime (learning.feasibility_cutin.
+        CutinRuntime / learning.feasibility_sandwich.SandwichRuntime, or
+        anything else satisfying learning.feasibility_common.ArenaRuntime's
+        structural contract; duck-typed, EgoTrafficEnv never imports either
+        family module or isinstance-checks this). When given, every
+        reset() instead realizes exactly ARENA_N_SURR=6 agents via
+        `arena.reset(...)`, discretionary MOBIL is disabled for all of them
+        (MobilParams(threshold=inf) -- see reset()), and every step()
+        calls `arena.pre_surr_step(...)` right before advancing surr
+        traffic (so a family can script one agent's behaviour -- a
+        prescribed lane change or emergency stop -- via
+        model.traffic_step.step_surr_agents' accel_override parameter or
+        by mutating a TrafficAgent's public fields directly) and merges
+        `arena.extra_info()` into info["arena"]. goal_distance_m/
+        max_episode_seconds/min_progress_m are read off `arena` exactly
+        like ScenarioConfig's own fields (see reset()).
         """
+        if scenario_config is not None and arena is not None:
+            raise ValueError("EgoTrafficEnv: scenario_config and arena are mutually exclusive.")
+
         super().__init__()
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape = (2,), dtype = np.float32)
-        obs_dim = 7 + 5 * N_SURR
+        n_surr = ARENA_N_SURR if arena is not None else N_SURR
+        obs_dim = 7 + 5 * n_surr
         self.observation_space = spaces.Box(low = -np.inf, high = np.inf, shape = (obs_dim,), dtype = np.float32)
 
         self.scenario_config = scenario_config
+        self.arena = arena
         self.mode = mode
         self.worker_rank = worker_rank
         self.max_steering_rate = max_steering_rate
@@ -300,7 +326,36 @@ class EgoTrafficEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed = seed)   # sets self.np_random; reseeds only if seed is not None
 
-        if self.scenario_config is None:
+        if self.arena is not None:
+            # Feasibility-pipeline arena path (see __init__'s own docstring). Mirrors the compact-
+            # scenario path's seed/episode-index bookkeeping exactly (fixed vs distribution mode,
+            # worker_rank, derive_seed) -- arena.reset() is the only thing that differs.
+            if seed is not None:
+                self._episode_counter = 0
+            if self.mode == "fixed":
+                episode_index, worker_rank = 0, 0
+            else:
+                episode_index, worker_rank = self._episode_counter, self.worker_rank
+                self._episode_counter += 1
+
+            scenario_seed = derive_seed(self.arena.cfg.seed, worker_rank, episode_index)
+            scenario_rng = np.random.default_rng(scenario_seed)
+
+            self.road = Road(s_max = ROAD_KWARGS["s_max"], kappa_max = self.arena.cfg.road_kappa_max,
+                              L_clothoid = ROAD_KWARGS["L_clothoid"], mu = self.arena.cfg.road_mu,
+                              lane_num = LANE_NUM)
+            ego_lane = LANE_NUM // 2
+            self.agents, ego_v0, self._realized_scenario = self.arena.reset(
+                self.road, EGO_S0, ego_lane, scenario_rng,
+                worker_rank = worker_rank, episode_index = episode_index, scenario_seed = scenario_seed,
+            )
+            # Discretionary MOBIL is disabled for every arena actor: mobil_decision's
+            # `incentive > threshold` can never fire with an infinite threshold, so IDM/steering/
+            # dynamics stay fully live but no agent ever *initiates* a lane change on its own --
+            # only this env's arena.pre_surr_step (see step()) can prescribe one. No change to
+            # controllers.mobil/model.traffic_step needed for this.
+            self.mobil_params = MobilParams(threshold = math.inf)
+        elif self.scenario_config is None:
             # Legacy path: initialization.traffic_init's fixed 16-slot
             # traffic template (see generate_traffic) -- ego_lane must
             # match TEMPLATE_EGO_LANE, the lane the template's fixed ego
@@ -358,13 +413,16 @@ class EgoTrafficEnv(gym.Env):
         self._max_p_rollover = 0.0
         self._max_departure = abs(self._ego_backbone_e_y())
 
-        # Goal/episode-length/reward config: from the ScenarioConfig when one is given, else this
-        # module's original legacy-path constants (full-road completion, EPISODE_SECONDS) -- see
-        # __init__'s own docstring and ScenarioConfig.goal_distance_m's comment.
-        if self.scenario_config is not None:
-            self._goal_s = EGO_S0 + self.scenario_config.goal_distance_m
-            self._max_steps = max(1, int(round(self.scenario_config.max_episode_seconds / DT)))
-            self._min_progress_m = self.scenario_config.min_progress_m
+        # Goal/episode-length/reward config: from whichever config is active (ScenarioConfig and
+        # ArenaCommonConfig -- see learning.feasibility_common -- expose the identical field names,
+        # so one branch covers both without either config type needing a shared base class), else
+        # this module's original legacy-path constants (full-road completion, EPISODE_SECONDS) --
+        # see __init__'s own docstring and ScenarioConfig.goal_distance_m's comment.
+        active_cfg = self.arena.cfg if self.arena is not None else self.scenario_config
+        if active_cfg is not None:
+            self._goal_s = EGO_S0 + active_cfg.goal_distance_m
+            self._max_steps = max(1, int(round(active_cfg.max_episode_seconds / DT)))
+            self._min_progress_m = active_cfg.min_progress_m
         else:
             self._goal_s = self.road.s_max
             self._max_steps = MAX_STEPS
@@ -391,11 +449,18 @@ class EgoTrafficEnv(gym.Env):
         self.ego_car.step(accel, delta, kappa, self.road.mu, DT)
         self._update_ego_pose()
 
+        # Arena scripted-event hook (see learning.feasibility_common.ArenaRuntime) -- may mutate
+        # self.agents in place (e.g. a cut-in's prescribed target_lane/lane_change_t0 assignment)
+        # and/or return a {car_id: accel} override for step_surr_agents' own accel_override
+        # parameter (e.g. a sandwich's prescribed emergency stop). None for every non-arena env.
+        accel_override = (self.arena.pre_surr_step(self.t, self.ego_car.state, self.agents)
+                           if self.arena is not None else None)
+
         step_surr_agents(self.agents, self.road, self.t, DT,
                           mobil_params = self.mobil_params, lane_num = LANE_NUM,
                           ego_car = self.ego_car,
                           max_braking = MAX_BRAKING, lane_change_cooldown = LANE_CHANGE_COOLDOWN,
-                          crash_bleed_k = CRASH_BLEED_K)
+                          crash_bleed_k = CRASH_BLEED_K, accel_override = accel_override)
 
         self.t += DT
         self.step_count += 1
@@ -494,6 +559,10 @@ class EgoTrafficEnv(gym.Env):
             "max_p_rollover": self._max_p_rollover,
             "max_road_departure_m": self._max_departure,
         }
+        if self.arena is not None:
+            # Family-specific diagnostics (event trigger station/time, phase classification, etc.)
+            # -- namespaced under "arena" so it can never collide with a key above.
+            info["arena"] = self.arena.extra_info()
         return self._get_obs(), reward, terminated, truncated, info
 
     def get_realized_scenario(self) -> dict:
