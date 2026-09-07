@@ -22,10 +22,18 @@ improvement in mean return for --patience consecutive evaluations (each
 --eval-freq-timesteps apart, only after --min-evals have happened at all) --
 a deliberately cautious, patience-based rule so one lucky/unlucky evaluation
 can't stop or extend training on its own (see StopTrainingOnNoModelImprovement
-below). Pass --no-early-stop to always run the full --timesteps instead. The
-BEST checkpoint seen (by that held-out mean return) is saved to
-<out>_best/best_model.zip alongside the FINAL checkpoint at <out>.zip -- the
-meta.json records which one <out>.zip actually is and why training ended.
+below). Pass --no-early-stop to always run the full --timesteps instead.
+
+The FINAL training-state model is not necessarily the best one -- reward can
+(and does, in practice) dip after its peak before enough consecutive
+non-improving evaluations accumulate to actually stop. So <out>.zip -- the
+one everything else (learning.eval, re-evaluation, a later Runner C) loads
+by default -- is the BEST held-out checkpoint whenever early stopping
+recorded one, not just whatever the optimizer's raw endpoint happened to be;
+the raw final state is preserved separately at <out>_final.zip for
+diagnostic comparison. meta.json's "evaluated_checkpoint" field ("best" or
+"final") always says which one <out>.zip actually is, alongside why training
+ended ("stop_reason").
 
 Usage:
     python -m learning.feasibility_train_one --scenario-family cutin \\
@@ -189,19 +197,38 @@ def main():
     if callback is not None and model.num_timesteps < args.timesteps:
         stop_reason = (f"early stopping: no improvement over {args.patience} held-out evaluations "
                         f"(each {args.patience_episodes} episodes) after {args.min_evals} minimum evals")
-    model.save(args.out)
     vec_env.close()
+
+    # The FINAL training-state model is not necessarily the best one -- that's the whole point of
+    # early stopping on a held-out plateau (see the module docstring): reward can (and, in practice,
+    # does) dip after its peak before enough consecutive non-improving evals accumulate to stop.
+    # <out>_final.zip always preserves the raw final state for diagnostic comparison; <out>.zip --
+    # the deliverable everything else (learning.eval, re-evaluation, Runner C later) loads -- is the
+    # best held-out checkpoint whenever one was recorded, matching "ship your best," never a worse
+    # final state chosen only because it happened to be the last one computed.
+    best_path = f"{args.out}_best/best_model.zip"
+    final_path = f"{args.out}_final"
+    model.save(final_path)
+    if callback is not None and os.path.exists(best_path):
+        eval_model = PPO.load(best_path)
+        eval_model.save(args.out)
+        evaluated_checkpoint = "best"
+    else:
+        eval_model = model
+        model.save(args.out)
+        evaluated_checkpoint = "final"
 
     meta = {**resolved, "ppo_seed": args.ppo_seed, "timesteps_budget": args.timesteps,
             "timesteps_actual": int(model.num_timesteps), "stop_reason": stop_reason,
-            "n_envs": args.n_envs,
-            "best_checkpoint": None if args.no_early_stop else f"{args.out}_best/best_model.zip"}
+            "n_envs": args.n_envs, "evaluated_checkpoint": evaluated_checkpoint,
+            "best_checkpoint": best_path if os.path.exists(best_path) else None,
+            "final_checkpoint": f"{final_path}.zip"}
 
     if args.episodes > 0:
         eval_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=0)
         if args.eval_seed is not None:
-            model.set_random_seed(args.eval_seed)
-        results = run_episodes(model, eval_env, args.episodes, deterministic=not args.stochastic)
+            eval_model.set_random_seed(args.eval_seed)
+        results = run_episodes(eval_model, eval_env, args.episodes, deterministic=not args.stochastic)
         summary = summarize_seed(results, mode="distribution", success_threshold=1.0)
         print(f"\n{summary['n_success']}/{summary['n_episodes']} success ({summary['success_rate']:.1%}), "
               f"95% CI {summary['wilson_95ci']} | collisions={summary['n_collisions']} "
