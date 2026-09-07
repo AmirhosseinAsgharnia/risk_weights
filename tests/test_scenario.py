@@ -256,7 +256,7 @@ def test_parallel_workers_differ():
 def test_observation_shape_dtype():
     env = EgoTrafficEnv()
     obs, info = env.reset(seed=0)
-    assert obs.shape == (5 + 3 * N_SURR,) == (50,)
+    assert obs.shape == (7 + 5 * N_SURR,) == (82,)
     assert obs.dtype == np.float32
 
     obs2, reward, terminated, truncated, info = env.step(env.action_space.sample())

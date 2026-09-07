@@ -8,6 +8,29 @@ Usage:
     python -m learning.train [--timesteps N] [--n-envs N] [--out PATH] [--device DEVICE]
                               [--scenario-config PATH --scenario-mode {fixed,distribution}]
                               [--base-seed N] [--ppo-seed N] [--force]
+
+--scenario-config expects a JSON-serialized ScenarioConfig (learning.scenario). Both commands
+below are self-contained (run from the repo root, in the project's venv) -- they generate
+scenario.json first if it isn't already there, then train, so they work as a straight
+copy/paste with no separate setup step:
+
+Small validation run -- quick sanity check (a few minutes) that training against a fixed
+scenario still learns and nothing regressed after an env/reward change, before committing
+to a full budget:
+    test -f scenario.json || python -c "import json; from learning.scenario import ScenarioConfig; \
+json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))" && \
+    python -m learning.train --timesteps 20000 --n-envs 4 --out learning/ppo_ego_smoke \
+                              --scenario-config scenario.json --scenario-mode fixed \
+                              --ppo-seed 0 --force
+
+Big run -- the real training budget, once the small run looks healthy. Repeat with a
+different --ppo-seed (and --out) for the "several independent PPO seeds" feasibility
+protocol -- see learning.eval_batch:
+    test -f scenario.json || python -c "import json; from learning.scenario import ScenarioConfig; \
+json.dump(ScenarioConfig(seed=0).to_dict(), open('scenario.json', 'w'))" && \
+    python -m learning.train --timesteps 2000000 --out learning/ppo_ego_seed0 \
+                              --scenario-config scenario.json --scenario-mode fixed \
+                              --ppo-seed 0 --force
 """
 
 import argparse
@@ -19,7 +42,9 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from learning.env import EgoTrafficEnv, N_SURR, LANE_NUM, DT, EPISODE_SECONDS, MAX_STEPS
+from learning.env import (
+    EgoTrafficEnv, N_SURR, LANE_NUM, DT, EPISODE_SECONDS, MAX_STEPS, MAX_STEERING_RATE, MAX_JERK,
+)
 from learning.scenario import ScenarioConfig
 
 _DEFAULT_N_ENVS = max(1, (os.cpu_count() or 4) - 1)   # leave one core for the main process
@@ -39,7 +64,8 @@ def _build_meta(args, scenario_config: ScenarioConfig | None) -> dict:
         "env_constants": {
             "N_SURR": N_SURR, "LANE_NUM": LANE_NUM, "DT": DT,
             "EPISODE_SECONDS": EPISODE_SECONDS, "MAX_STEPS": MAX_STEPS,
-            "obs_dim": 5 + 3 * N_SURR, "action_dim": 2,
+            "obs_dim": 7 + 5 * N_SURR, "action_dim": 2,
+            "max_steering_rate": MAX_STEERING_RATE, "max_jerk": MAX_JERK,
         },
     }
 
