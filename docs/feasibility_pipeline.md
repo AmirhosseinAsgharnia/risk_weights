@@ -1,18 +1,22 @@
 # Operating the feasibility-surrogate pipeline
 
 **Status**: the simulation layer (two scenario families + `EgoTrafficEnv`
-integration) and **Runner A** (single-scenario train/evaluate) are built and
-tested (59/59 tests passing). The dataset/surrogate/sampling layer and
-Runners B/C are **not built yet**. Every case below has a real, tested
-command except Case 3, which is marked as not yet available rather than
-faked.
+integration), **Runner A** (single-scenario train/evaluate,
+`learning/feasibility_train_one.py`), and **Runner B** (the cutin-database +
+surrogate pipeline, `learning/feasibility_pipeline.py`) are all built and
+tested (87/87 tests passing). Runner B is validated end to end (pilot,
+resumable `run`, `fit-only`) on tiny synthetic budgets — it has not yet been
+run for a real campaign on the target 32-core machine. Runner C (compare one
+theta's empirical vs. surrogate probability) is the one piece still not
+built.
 
 | Case | Command exists? |
 |---|---|
 | 1. Train a single scenario | Yes |
 | 2. Evaluate a trained model | Yes (two ways) |
-| 3. Train the approximator (surrogate) | **No — not built yet** |
+| 3. Train the approximator (surrogate) | Yes — Runner B (§3 below) |
 | 4. Watch an episode animate | Yes |
+| 5. Compare one theta: empirical vs. surrogate | Not built yet (Runner C) |
 
 ---
 
@@ -83,28 +87,65 @@ print(summarize_seed(results, mode='distribution', success_threshold=1.0))
 
 `cfg` must match the theta you actually trained with — copy it straight out
 of `<out>.meta.json`'s `"theta"` field rather than retyping it if you don't
-remember the values. This is also the exact function (`run_episodes`/
-`summarize_seed`, from `learning/eval_batch.py`) Runner B will call
-internally once it exists.
+remember the values. This is the same `run_episodes`/`summarize_seed`
+(from `learning/eval_batch.py`) that both Case 1 and Runner B (§3) already
+use internally for their own evaluation.
 
 ---
 
-## Case 3: Train the approximator (surrogate) — not built yet
+## Case 3: Train the approximator (surrogate) — Runner B
 
-There is no command for this today. It needs, in order:
+Three steps, each a mode of the same command. **Run `pilot` first, on the
+real machine** — it benchmarks concurrency levels and recommends one,
+rather than you guessing (see the GPU note below).
 
-1. **Runner B** (not built) — sample a batch of theta values (Sobol/Latin
-   hypercube), run Case 1's train+evaluate for each one, append every result
-   to a durable dataset.
-2. Fit a small classifier (logistic/random-forest/histogram-gradient-boosting)
-   on the accumulated *rollout-level* binary outcomes, grouped by
-   `scenario_id` so no scenario's data leaks across train/validation.
+```bash
+# 3a. Benchmark concurrency on this machine (writes nothing to the real dataset).
+python -m learning.feasibility_pipeline --mode pilot --scenario-family cutin \
+    --blocker-side 1 --pilot-concurrencies 1,2,4,8,16 --pilot-envs-per-job 4
 
-You can approximate step 1 by hand today — run Case 1 several times with
-different `--s-cutin-m`/`--cutter-gap-m`/etc. values and different `--out`
-paths, and keep your own table of (theta, success_rate) from each run's
-printed summary — but there's no automated dataset file or fitting command
-yet. Say the word and I'll build Runner B next.
+# 3b. Sample a batch of theta via Latin Hypercube Sampling, train+evaluate each
+#     one, accumulate into artifacts/feasibility/datasets/cutin/side_pos1/.
+#     Safely resumable -- re-running this exact command skips every scenario
+#     that already has a result (see "Resuming" below).
+python -m learning.feasibility_pipeline --mode run --scenario-family cutin \
+    --blocker-side 1 --n-thetas 24 --sampling-seed 0 \
+    --concurrency 6 --n-envs 4 --timesteps 2000000 --episodes 100
+
+# 3c. Fit the surrogate on whatever's in the dataset so far.
+python -m learning.feasibility_pipeline --mode fit-only --scenario-family cutin \
+    --blocker-side 1 --surrogate-out artifacts/feasibility/surrogates/cutin_side1.joblib
+```
+
+**Run both blocker sides separately** (`--blocker-side 1` and `--blocker-side
+-1`) — they get independent Latin Hypercube designs, independent datasets,
+and independent surrogates, never combined, per the original design
+decision that the two sides are separate experimental strata.
+
+**Why `pilot` first, and why the GPU isn't part of it**: PPO with a small
+`MlpPolicy` over this plain NumPy/Python physics environment is CPU-bound
+end to end — putting the network on a GPU adds transfer overhead for no
+benefit (the same warning SB3 prints if you pass `--device cuda`). Every job
+in this pipeline runs on CPU. The real lever is how many *cores* go to one
+job's `--n-envs` vs. how many *scenarios* train **concurrently** — `pilot`
+measures scenarios/hour at a few concurrency levels on your actual hardware
+and tells you which to use for step 3b's `--concurrency`, rather than
+assuming more concurrency (or more envs per job) is automatically better.
+
+**Resuming**: every worker durably writes its own result file under
+`artifacts/feasibility/evaluations/<family>/side_*/<scenario_id>.result.json`
+*before* the coordinator ever touches the shared dataset. Re-running the
+same `--mode run` command later — after a crash, a `Ctrl-C`, or just to
+pick up where you left off — reconciles any already-finished-but-not-yet-
+recorded scenarios for free (no retraining) and only launches new work for
+what's actually missing.
+
+**Preliminary datasets**: below 50 distinct scenarios, `fit-only`'s printed
+report and the saved artifact are both explicitly marked `PRELIMINARY` —
+worth having a real pipeline-correctness check, never a claim of accuracy.
+An all-one-outcome dataset (every rollout succeeds, or every one fails) is
+handled too — the surrogate falls back to a constant predictor rather than
+erroring, since a classifier can't discriminate what it's never seen vary.
 
 ---
 
