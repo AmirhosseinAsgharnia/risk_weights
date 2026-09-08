@@ -225,7 +225,11 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
     final_path = f"{params.out}_final"
     model.save(final_path)
     if callback is not None and os.path.exists(best_path):
-        eval_model = PPO.load(best_path)
+        # PPO.load()'s own `device` parameter defaults to "auto" -- independent of params.device --
+        # so without this, the reloaded best checkpoint (the one actually used for final evaluation
+        # and saved as <out>.zip) would silently ignore --device cpu and grab CUDA whenever available,
+        # regardless of what the training-phase PPO(...) construction above was correctly given.
+        eval_model = PPO.load(best_path, device=params.device)
         eval_model.save(params.out)
         evaluated_checkpoint = "best"
     else:

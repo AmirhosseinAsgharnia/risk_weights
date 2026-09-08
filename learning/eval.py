@@ -84,7 +84,10 @@ def main():
                          help = "sample actions from the policy instead of using its deterministic mean")
     args = parser.parse_args()
 
-    model = PPO.load(args.model)
+    model = PPO.load(args.model, device="cpu")   # see feasibility_train_one's own fix -- PPO.load()
+                                                   # defaults device to "auto", which would silently
+                                                   # grab CUDA if available regardless of this project's
+                                                   # CPU-only-training rationale.
 
     # Reconstruct the exact scenario this model was trained on (see _env_from_meta -- covers both
     # learning.train's ScenarioConfig models and learning.feasibility_train_one's arena models).

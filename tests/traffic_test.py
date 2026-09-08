@@ -110,7 +110,10 @@ if model_path is not None:
         print("stable_baselines3 isn't installed -- falling back to a straight, constant-speed ego controller.")
     else:
         try:
-            model = PPO.load(model_path)
+            model = PPO.load(model_path, device="cpu")   # PPO.load()'s own device param defaults to
+                                                           # "auto", which would silently grab CUDA if
+                                                           # available -- see feasibility_train_one's
+                                                           # identical fix.
             print(f"ego driven by trained policy: {model_path}")
         except FileNotFoundError:
             print(f"No trained model found at {model_path!r} -- falling back to a straight, constant-speed "

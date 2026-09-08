@@ -2,21 +2,23 @@
 
 **Status**: the simulation layer (two scenario families + `EgoTrafficEnv`
 integration), **Runner A** (single-scenario train/evaluate,
-`learning/feasibility_train_one.py`), and **Runner B** (the cutin-database +
+`learning/feasibility_train_one.py`), and **Runner B** (the database +
 surrogate pipeline, `learning/feasibility_pipeline.py`) are all built and
-tested (87/87 tests passing). Runner B's `pilot` mode has now been run for
-real on the target 32-core / RTX 5070 machine (`abl-drivsim-iii`) — see
-§3's measured numbers below; a full `run` campaign hasn't been launched
-there yet. Runner C (compare one theta's empirical vs. surrogate
-probability) is the one piece still not built.
+tested (87/87 tests passing). Runner B's `pilot` mode and a full `run`
+campaign have both now been executed for real on the target 32-core / RTX
+5070 machine (`abl-drivsim-iii`) — see §3's measured numbers below. A
+result-interpretation tool (heatmaps of feasible/non-feasible regions, §5)
+is also built. Runner C (numerically compare one theta's empirical vs.
+surrogate probability) is the one piece still not built.
 
 | Case | Command exists? |
 |---|---|
 | 1. Train a single scenario | Yes |
 | 2. Evaluate a trained model | Yes (two ways) |
 | 3. Train the approximator (surrogate) | Yes — Runner B (§3 below) |
-| 4. Watch an episode animate | Yes |
-| 5. Compare one theta: empirical vs. surrogate | Not built yet (Runner C) |
+| 4. Watch an episode animate | Yes (two ways) |
+| 5. Visualize feasible/non-feasible regions (heatmaps) | Yes (§5 below) |
+| 6. Compare one theta: empirical vs. surrogate | Not built yet (Runner C) |
 
 ---
 
@@ -57,7 +59,20 @@ already saved at that path — pass `--force` to do it anyway.
 
 Full field list and valid ranges: `THETA_BOUNDS_CUTIN` in
 `learning/feasibility_cutin.py`, `THETA_BOUNDS_SANDWICH` in
-`learning/feasibility_sandwich.py`.
+`learning/feasibility_sandwich.py` — these are a moving target as the
+project's understanding of "physically sensible" ranges evolves (e.g.
+`front_gap_m`/`cutter_relative_speed_mps` were both widened this session),
+so always check the source rather than trusting an old copy of this table.
+**If you change these bounds, treat any dataset sampled under the old
+bounds as a separate experiment** — `learning.feasibility_pipeline --mode
+run` will happily mix old- and new-bound scenarios into the same
+`scenarios.jsonl` (nothing tags a record with which bounds generated it),
+which skews coverage without erroring. Archiving the old dataset directory
+aside before resampling (see §3) keeps this honest.
+
+Device: every job here runs on CPU by default (`--device cpu`) — see the
+GPU note in §3, which also covers a real bug (fixed this session) where
+`PPO.load()` ignored this setting.
 
 ---
 
@@ -76,7 +91,7 @@ from learning.env import EgoTrafficEnv
 from learning.feasibility_cutin import CutinConfig, CutinRuntime
 from learning.eval_batch import run_episodes, summarize_seed
 
-model = PPO.load('learning/ppo_cutin_theta0')
+model = PPO.load('learning/ppo_cutin_theta0', device='cpu')
 cfg = CutinConfig(seed=0, blocker_side=1, mode='robust', s_cutin_m=200.0, cutter_gap_m=25.0)
 env = EgoTrafficEnv(arena=CutinRuntime(cfg), mode='distribution', worker_rank=0)
 
@@ -90,6 +105,9 @@ of `<out>.meta.json`'s `"theta"` field rather than retyping it if you don't
 remember the values. This is the same `run_episodes`/`summarize_seed`
 (from `learning/eval_batch.py`) that both Case 1 and Runner B (§3) already
 use internally for their own evaluation.
+
+`device='cpu'` on the `PPO.load(...)` call is deliberate, not optional —
+see §3's GPU note.
 
 ---
 
@@ -109,7 +127,7 @@ python -m learning.feasibility_pipeline --mode pilot --scenario-family cutin \
 #     Safely resumable -- re-running this exact command skips every scenario
 #     that already has a result (see "Resuming" below).
 python -m learning.feasibility_pipeline --mode run --scenario-family cutin \
-    --blocker-side 1 --n-thetas 24 --sampling-seed 0 \
+    --blocker-side 1 --n-thetas 100 --sampling-seed 1 \
     --concurrency 8 --n-envs 4 --timesteps 2000000 --episodes 100
 
 # 3c. Fit the surrogate on whatever's in the dataset so far.
@@ -136,6 +154,19 @@ other even on CPU. The real lever is how many *cores* go to one job's
 `--n-envs` vs. how many *scenarios* train **concurrently** -- `pilot`
 measures scenarios/hour at a few concurrency levels on your actual hardware
 and tells you which to use for step 3b's `--concurrency`.
+
+**A third device bug, found and fixed after a real 24-scenario campaign
+still showed GPU warnings despite the two fixes above**: `--device cpu`
+only ever flowed into the *training-phase* `PPO(...)` construction.
+`PPO.load(...)` has its own, independent `device` parameter that defaults
+to `"auto"` — so reloading the best early-stopping checkpoint (which is
+what's actually used for final evaluation, and what gets saved as the
+deliverable `<out>.zip`, for nearly every scenario) silently ignored
+`--device cpu` and grabbed CUDA whenever available. Fixed by passing
+`device=` explicitly at every `PPO.load(...)` call site in the codebase
+(`feasibility_train_one.py`, `eval.py`, `eval_batch.py`,
+`animate_rollout.py`, `tests/traffic_test.py`). If you're on an older
+checkout, `git pull` before running a new campaign.
 
 **Measured on `abl-drivsim-iii` (32 cores, RTX 5070), `--pilot-envs-per-job 4`:**
 
@@ -165,9 +196,26 @@ pick up where you left off — reconciles any already-finished-but-not-yet-
 recorded scenarios for free (no retraining) and only launches new work for
 what's actually missing.
 
+**`--n-thetas` is additive, not a target total.** Each `--mode run` call
+draws a *fresh* LHS design of that size and appends the results on top of
+whatever's already in `scenarios.jsonl`/`rollouts.jsonl` — it does not "top
+up" an existing dataset to that count, and it doesn't deduplicate against a
+differently-seeded design. Running `--n-thetas 100` against a dataset that
+already has 24 in it ends with ~124, not 100. If you've changed
+`THETA_BOUNDS_CUTIN`/`THETA_BOUNDS_SANDWICH` since the existing data was
+sampled, archive it first rather than mixing bound-inconsistent data
+silently:
+
+```bash
+mkdir -p artifacts/feasibility/_archive
+mv artifacts/feasibility/datasets/cutin/side_pos1    artifacts/feasibility/_archive/datasets_side_pos1_<label>
+mv artifacts/feasibility/policies/cutin/side_pos1     artifacts/feasibility/_archive/policies_side_pos1_<label>
+mv artifacts/feasibility/evaluations/cutin/side_pos1  artifacts/feasibility/_archive/evaluations_side_pos1_<label>
+```
+
 **Preliminary datasets**: below 50 distinct scenarios, `fit-only`'s printed
 report and the saved artifact are both explicitly marked `PRELIMINARY` —
-worth having a real pipeline-correctness check, never a claim of accuracy.
+worth having as a real pipeline-correctness check, never a claim of accuracy.
 An all-one-outcome dataset (every rollout succeeds, or every one fails) is
 handled too — the surrogate falls back to a constant predictor rather than
 erroring, since a classifier can't discriminate what it's never seen vary.
@@ -175,6 +223,9 @@ erroring, since a classifier can't discriminate what it's never seen vary.
 ---
 
 ## Case 4: Watch an episode animate
+
+**4a — the model's own canonical realization** (episode-index 0 of that
+scenario, always the same realization every time you run this):
 
 ```bash
 python -m learning.eval --model learning/ppo_cutin_theta0
@@ -188,12 +239,95 @@ the *exact* scenario automatically — no extra flags needed, works for any
 model saved by Case 1.
 
 ```bash
-python -m learning.eval --model learning/ppo_cutin_theta0 --seed 7 --stochastic
+python -m learning.eval --model learning/ppo_cutin_theta0 --stochastic
 ```
 
-`--seed N` replays a specific realization seed; `--stochastic` samples
-actions instead of using the policy's deterministic mean.
+`--stochastic` samples actions instead of using the policy's deterministic
+mean. **Note**: `learning.eval`'s `--seed` flag exists but does **not**
+select which of the scenario's evaluated episodes gets replayed — the
+animator always reconstructs the environment in `mode="fixed"`, which is
+hardcoded to episode-index 0 regardless of `--seed`. Use 4b instead if you
+specifically want to watch one of the 100 evaluated realizations (e.g. one
+that's known to have collided).
 
-*(This command didn't actually work for feasibility-arena models until this
-session — `learning/eval.py` only knew how to reconstruct the older
-15-vehicle `ScenarioConfig` models before now; fixed and verified.)*
+**4b — a specific evaluated episode** (e.g. one you found via
+`rollouts.jsonl` — see §5's "find failing episodes" snippet):
+
+```bash
+python -m learning.animate_rollout --model artifacts/feasibility/policies/cutin/side_pos1/<scenario_id>/model \
+    --episode-index 37 --save out.mp4
+```
+
+`--episode-index N` (0-based) reconstructs the environment in
+`mode="distribution"` and replays `reset()` N+1 times to land on exactly
+the realization episode N saw during the real evaluation (`run_episodes`'s
+own episode-counter bookkeeping) — the realization actually recorded in
+`rollouts.jsonl` for that episode, not an approximation.
+
+`--save PATH.mp4` writes the animation to a file instead of opening a
+window — the practical choice on `abl-drivsim-iii`, which is headless over
+SSH; `scp` the file back afterward, or use `ssh -X` and drop `--save` to
+watch it live. Omit `--save` to open an (auto-maximized, where the backend
+supports it) interactive window instead.
+
+---
+
+## Case 5: Visualize feasible/non-feasible regions (heatmaps)
+
+```bash
+# Works right now with just the accumulated dataset -- no fitted surrogate needed.
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 \
+    --out-dir artifacts/feasibility/heatmaps/cutin_side1
+
+# Once a surrogate is fit (Case 3, step 3c), add the model-based panel:
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 \
+    --surrogate artifacts/feasibility/surrogates/cutin_side1.joblib \
+    --out-dir artifacts/feasibility/heatmaps/cutin_side1
+
+# Restrict to specific dimensions instead of every pair (default: all of them):
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 \
+    --dims front_gap_m,cutter_relative_speed_mps,s_cutin_m \
+    --out-dir artifacts/feasibility/heatmaps/cutin_side1
+```
+
+Writes one PNG per pair of theta dimensions (28 for cutin's 8 fields, 45 for
+sandwich's 10, unless `--dims` restricts it) to `--out-dir`. Each PNG has
+one or two panels:
+
+- **Empirical** (always present): every sampled scenario's `success_rate`,
+  projected onto that 2D pair and smoothed via linear interpolation between
+  points (red = infeasible, green = feasible). This is a **marginal
+  projection** — a point's color reflects its true full-dimensional theta,
+  including whatever the other 6-8 fields happened to be, not a controlled
+  slice — and the fill is only shown inside the convex hull of actually-
+  sampled points (gray elsewhere, never fabricated).
+- **Surrogate** (only with `--surrogate`): the fitted model's `p_hat` on a
+  dense grid, with every *other* theta dimension held fixed at the
+  dataset's own median value — an actual controlled 2D slice, and (unlike
+  the empirical panel) defined everywhere in-bounds, not just inside the
+  sampled convex hull.
+
+**Finding a specific failing episode to animate** (for Case 4b), e.g. from
+a scenario_id you spotted as low-`success_rate` in a heatmap:
+
+```bash
+python3 -c "
+import json
+sid = 'PUT_A_SCENARIO_ID_HERE'
+for l in open('artifacts/feasibility/datasets/cutin/side_pos1/rollouts.jsonl'):
+    r = json.loads(l)
+    if r['scenario_id'] == sid and r['y'] == 0:
+        print(r['episode'], r['failure_reason'])
+"
+```
+
+---
+
+## Case 6: Compare one theta's empirical vs. surrogate probability
+
+Not built yet (Runner C) — the plan is a small CLI that takes one manually
+specified theta, trains+evaluates it fresh (reusing `feasibility_train_one.
+train_and_evaluate`) for a genuine empirical success rate, and compares it
+against `SurrogateArtifact.predict(theta)`'s `p_hat` + epistemic interval,
+to sanity-check the surrogate against ground truth at a point it may or may
+not have seen during training.
