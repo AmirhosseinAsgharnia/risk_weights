@@ -1,0 +1,50 @@
+{
+  "scenario_family": "cutin",
+  "scenario_id": "82150dc67f4f7c63",
+  "blocker_side": 1,
+  "mode": "robust",
+  "scenario_seed": 0,
+  "theta": {
+    "road_mu": 1.0,
+    "road_kappa_max": 0.005,
+    "s_cutin_m": 200.0,
+    "cutter_gap_m": 25.0,
+    "cutter_relative_speed_mps": 0.0,
+    "front_gap_m": 30.0,
+    "front_relative_speed_mps": 0.0,
+    "escape_gap_length_m": 20.0
+  },
+  "goal_distance_m": 400.0,
+  "max_episode_seconds": 35.0,
+  "min_progress_m": 100.0,
+  "ppo_seed": 0,
+  "timesteps_budget": 2000000,
+  "timesteps_actual": 1300000,
+  "stop_reason": "early stopping: no improvement over 5 held-out evaluations (each 20 episodes) after 5 minimum evals",
+  "n_envs": 20,
+  "best_checkpoint": "learning/ppo_cutin_theta0_best/best_model.zip",
+  "evaluation": {
+    "episodes": 100,
+    "deterministic": true,
+    "eval_seed": null,
+    "summary": {
+      "n_episodes": 100,
+      "n_success": 24,
+      "n_safety_failures": 66,
+      "n_collisions": 0,
+      "n_rollovers": 0,
+      "n_offroad": 66,
+      "n_timeouts": 10,
+      "success_rate": 0.24,
+      "mean_return": 89.77553674574034,
+      "std_return": 19.324839704291648,
+      "mean_success_time_s": 30.5437500000003,
+      "wilson_95ci": [
+        0.16691325556948772,
+        0.33232336349814473
+      ],
+      "repeatability": "OK",
+      "meets_threshold": false
+    }
+  }
+}
