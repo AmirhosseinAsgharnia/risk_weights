@@ -4,4 +4,3 @@
 *.pytest_cache
 *.zip
 __pycache__
-artifacts/

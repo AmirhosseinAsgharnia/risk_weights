@@ -1,0 +1,28 @@
+{
+  "scenario_family": "cutin",
+  "scenario_id": "8e0a47d8c55adf17",
+  "blocker_side": 1,
+  "mode": "robust",
+  "scenario_seed": 0,
+  "theta": {
+    "road_mu": 1.0,
+    "road_kappa_max": 0.005,
+    "s_cutin_m": 240.0,
+    "cutter_gap_m": 20.0,
+    "cutter_relative_speed_mps": 0.0,
+    "front_gap_m": 30.0,
+    "front_relative_speed_mps": 0.0,
+    "escape_gap_length_m": 20.0
+  },
+  "goal_distance_m": 400.0,
+  "max_episode_seconds": 35.0,
+  "min_progress_m": 100.0,
+  "ppo_seed": null,
+  "timesteps_budget": 20000,
+  "timesteps_actual": 24576,
+  "stop_reason": "reached --timesteps",
+  "n_envs": 4,
+  "evaluated_checkpoint": "final",
+  "best_checkpoint": null,
+  "final_checkpoint": "artifacts/feasibility/_pilot_bench/c8_job7/model_final.zip"
+}

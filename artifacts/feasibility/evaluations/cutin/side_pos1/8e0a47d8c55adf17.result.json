@@ -1,0 +1,34 @@
+{
+  "rollout_records": [],
+  "scenario_record": {
+    "blocker_side": 1,
+    "checkpoint": "final",
+    "family": "cutin",
+    "k": null,
+    "mean_return": null,
+    "mean_success_time_s": null,
+    "mode": "robust",
+    "n": null,
+    "n_collisions": null,
+    "n_offroad": null,
+    "n_rollovers": null,
+    "n_timeouts": null,
+    "ppo_seed": null,
+    "scenario_id": "8e0a47d8c55adf17",
+    "std_return": null,
+    "stop_reason": "reached --timesteps",
+    "success_rate": null,
+    "theta": {
+      "cutter_gap_m": 20.0,
+      "cutter_relative_speed_mps": 0.0,
+      "escape_gap_length_m": 20.0,
+      "front_gap_m": 30.0,
+      "front_relative_speed_mps": 0.0,
+      "road_kappa_max": 0.005,
+      "road_mu": 1.0,
+      "s_cutin_m": 240.0
+    },
+    "timesteps_actual": 24576,
+    "wilson_95ci": null
+  }
+}
