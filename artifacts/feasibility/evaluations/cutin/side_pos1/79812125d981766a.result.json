@@ -1,0 +1,1738 @@
+{
+  "rollout_records": [
+    {
+      "episode": 0,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 1,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 2,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 3,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 4,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 5,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 6,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 7,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 8,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 9,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 10,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 11,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 12,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 13,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 14,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 15,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 16,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 17,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 18,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 19,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 20,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 21,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 22,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 23,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 24,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 25,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 26,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 27,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 28,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 29,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 30,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 31,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 32,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 33,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 34,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 35,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 36,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 37,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 38,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 39,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 40,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 41,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 42,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 43,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 44,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 45,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 46,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 47,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 48,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 49,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 50,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 51,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 0
+    },
+    {
+      "episode": 52,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 53,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 54,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 55,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 56,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 57,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 58,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 59,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 60,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 61,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 62,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 63,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 64,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 65,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 66,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 67,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 68,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 69,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 70,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 71,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 72,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 73,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 74,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 75,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 76,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 77,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 78,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 79,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 80,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 81,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 82,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 83,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 84,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 85,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 86,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 87,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 88,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 89,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 90,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 91,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 92,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 93,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 94,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 95,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 96,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 97,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 98,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    },
+    {
+      "episode": 99,
+      "failure_reason": null,
+      "outcome": "finished",
+      "scenario_id": "79812125d981766a",
+      "theta": {
+        "cutter_gap_m": 19.804389293193182,
+        "cutter_relative_speed_mps": 5.704498042186561,
+        "escape_gap_length_m": 39.96661407128181,
+        "front_gap_m": 82.32698114012307,
+        "front_relative_speed_mps": 2.83226513080111,
+        "road_kappa_max": 0.004167918873876954,
+        "road_mu": 0.8605988897496855,
+        "s_cutin_m": 268.07241028461806
+      },
+      "y": 1
+    }
+  ],
+  "scenario_record": {
+    "blocker_side": 1,
+    "checkpoint": "best",
+    "family": "cutin",
+    "k": 99,
+    "mean_return": 121.70814326556818,
+    "mean_success_time_s": 28.397979797980064,
+    "mode": "robust",
+    "n": 100,
+    "n_collisions": 1,
+    "n_offroad": 0,
+    "n_rollovers": 0,
+    "n_timeouts": 0,
+    "ppo_seed": null,
+    "scenario_id": "79812125d981766a",
+    "std_return": 8.09042729253523,
+    "stop_reason": "early stopping: no improvement over 5 held-out evaluations (each 20 episodes) after 5 minimum evals",
+    "success_rate": 0.99,
+    "theta": {
+      "cutter_gap_m": 19.804389293193182,
+      "cutter_relative_speed_mps": 5.704498042186561,
+      "escape_gap_length_m": 39.96661407128181,
+      "front_gap_m": 82.32698114012307,
+      "front_relative_speed_mps": 2.83226513080111,
+      "road_kappa_max": 0.004167918873876954,
+      "road_mu": 0.8605988897496855,
+      "s_cutin_m": 268.07241028461806
+    },
+    "timesteps_actual": 1200000,
+    "wilson_95ci": [
+      0.9455138038212946,
+      0.9982325679358593
+    ]
+  }
+}

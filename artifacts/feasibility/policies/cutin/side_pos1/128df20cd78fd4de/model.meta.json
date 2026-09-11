@@ -1,0 +1,52 @@
+{
+  "scenario_family": "cutin",
+  "scenario_id": "128df20cd78fd4de",
+  "blocker_side": 1,
+  "mode": "robust",
+  "scenario_seed": 243528979,
+  "theta": {
+    "road_mu": 0.5643517720055959,
+    "road_kappa_max": 0.010522634962112719,
+    "s_cutin_m": 249.37337110510336,
+    "cutter_gap_m": 20.694836999470418,
+    "cutter_relative_speed_mps": 4.095018439585617,
+    "front_gap_m": 32.78131416521873,
+    "front_relative_speed_mps": -9.929498952823062,
+    "escape_gap_length_m": 18.439772144887243
+  },
+  "goal_distance_m": 400.0,
+  "max_episode_seconds": 35.0,
+  "min_progress_m": 100.0,
+  "ppo_seed": null,
+  "timesteps_budget": 2000000,
+  "timesteps_actual": 2007040,
+  "stop_reason": "reached --timesteps",
+  "n_envs": 4,
+  "evaluated_checkpoint": "best",
+  "best_checkpoint": "artifacts/feasibility/policies/cutin/side_pos1/128df20cd78fd4de/model_best/best_model.zip",
+  "final_checkpoint": "artifacts/feasibility/policies/cutin/side_pos1/128df20cd78fd4de/model_final.zip",
+  "evaluation": {
+    "episodes": 100,
+    "deterministic": true,
+    "eval_seed": null,
+    "summary": {
+      "n_episodes": 100,
+      "n_success": 0,
+      "n_safety_failures": 67,
+      "n_collisions": 33,
+      "n_rollovers": 4,
+      "n_offroad": 30,
+      "n_timeouts": 33,
+      "success_rate": 0.0,
+      "mean_return": 62.241563787742095,
+      "std_return": 37.72504971209957,
+      "mean_success_time_s": null,
+      "wilson_95ci": [
+        3.469446951953614e-18,
+        0.03699349820698568
+      ],
+      "repeatability": "OK",
+      "meets_threshold": false
+    }
+  }
+}

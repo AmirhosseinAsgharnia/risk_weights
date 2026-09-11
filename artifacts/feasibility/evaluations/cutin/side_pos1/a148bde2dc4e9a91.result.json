@@ -1,0 +1,1738 @@
+{
+  "rollout_records": [
+    {
+      "episode": 0,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 1,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 2,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 3,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 4,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 5,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 6,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 7,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 8,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 9,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 10,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 11,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 12,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 13,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 14,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 15,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 16,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 17,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 18,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 19,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 20,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 21,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 22,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 23,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 24,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 25,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 26,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 27,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 28,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 29,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 30,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 31,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 32,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 33,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 34,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 35,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 36,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 37,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 38,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 39,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 40,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 41,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 42,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 43,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 44,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 45,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 46,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 47,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 48,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 49,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 50,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 51,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 52,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 53,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 54,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 55,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 56,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 57,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 58,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 59,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 60,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 61,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 62,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 63,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 64,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 65,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 66,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 67,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 68,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 69,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 70,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 71,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 72,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 73,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 74,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 75,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 76,
+      "failure_reason": "collision",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 77,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 78,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 79,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 80,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 81,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 82,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 83,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 84,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 85,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 86,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 87,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 88,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 89,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 90,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 91,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 92,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 93,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 94,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 95,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 96,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 97,
+      "failure_reason": "off_road",
+      "outcome": "safety_failure",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 98,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    },
+    {
+      "episode": 99,
+      "failure_reason": null,
+      "outcome": "timeout",
+      "scenario_id": "a148bde2dc4e9a91",
+      "theta": {
+        "cutter_gap_m": 43.91709462010816,
+        "cutter_relative_speed_mps": 7.050041879564164,
+        "escape_gap_length_m": 32.7579154171321,
+        "front_gap_m": 34.61585209781001,
+        "front_relative_speed_mps": -1.9023804052839441,
+        "road_kappa_max": 0.019673785270712483,
+        "road_mu": 0.6877513407349001,
+        "s_cutin_m": 190.97434608381167
+      },
+      "y": 0
+    }
+  ],
+  "scenario_record": {
+    "blocker_side": 1,
+    "checkpoint": "best",
+    "family": "cutin",
+    "k": 0,
+    "mean_return": 57.3835076991087,
+    "mean_success_time_s": null,
+    "mode": "robust",
+    "n": 100,
+    "n_collisions": 12,
+    "n_offroad": 41,
+    "n_rollovers": 0,
+    "n_timeouts": 47,
+    "ppo_seed": null,
+    "scenario_id": "a148bde2dc4e9a91",
+    "std_return": 22.610357561619992,
+    "stop_reason": "reached --timesteps",
+    "success_rate": 0.0,
+    "theta": {
+      "cutter_gap_m": 43.91709462010816,
+      "cutter_relative_speed_mps": 7.050041879564164,
+      "escape_gap_length_m": 32.7579154171321,
+      "front_gap_m": 34.61585209781001,
+      "front_relative_speed_mps": -1.9023804052839441,
+      "road_kappa_max": 0.019673785270712483,
+      "road_mu": 0.6877513407349001,
+      "s_cutin_m": 190.97434608381167
+    },
+    "timesteps_actual": 2000000,
+    "wilson_95ci": [
+      3.469446951953614e-18,
+      0.03699349820698568
+    ]
+  }
+}
