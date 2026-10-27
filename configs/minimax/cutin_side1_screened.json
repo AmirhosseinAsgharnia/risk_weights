@@ -1,0 +1,16 @@
+{
+  "experiment_id": "cutin_side1_screened_v1",
+  "method": "minimax",
+  "seed": 0,
+  "strata": [{"family": "cutin", "blocker_side": 1,
+              "surrogate": "artifacts/feasibility/surrogates/cutin_side1.joblib"}],
+  "screening": {"policy": "conservative", "tau": 0.8, "tau_demonstrated": 0.8},
+  "seed_pool_dataset": "artifacts/feasibility/datasets/cutin/side_pos1/scenarios.jsonl",
+  "realization_seeds": [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007],
+  "master": {"n_init": 24, "n_starts": 3, "maxfev_per_start": 80},
+  "exchange": {"max_iterations": 15, "improvement_tol": 0.5, "stagnation_iterations": 4},
+  "adversary": {"n_global": 64, "max_global_evals": 12, "local_top": 2, "n_local": 4},
+  "oracle_refinement": {"enabled": false},
+  "heldout": {"sampling_seed": 10000, "n_per_stratum": 24, "realization_seeds": [5000, 5001, 5002, 5003, 5004, 5005, 5006, 5007, 5008, 5009]},
+  "n_workers": 24
+}

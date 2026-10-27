@@ -228,7 +228,10 @@ def main():
 
     seed_reports = []
     for model_path in args.model:
-        model = PPO.load(model_path)
+        model = PPO.load(model_path, device="cpu")   # see feasibility_train_one's own fix -- PPO.load()
+                                                       # defaults device to "auto", which would silently
+                                                       # grab CUDA if available regardless of this
+                                                       # project's CPU-only-training rationale.
         if args.eval_seed is not None:
             model.set_random_seed(args.eval_seed)   # only affects --stochastic action sampling
         meta = _load_meta(model_path)

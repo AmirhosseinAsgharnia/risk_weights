@@ -67,8 +67,8 @@ THETA_BOUNDS_CUTIN: dict[str, tuple[float, float]] = {
     "road_kappa_max": (0.0, 0.02),
     "s_cutin_m": (S_CUTIN_MIN_M, S_CUTIN_MAX_M),
     "cutter_gap_m": (8.0, 60.0),
-    "cutter_relative_speed_mps": (-12.0, 5.0),
-    "front_gap_m": (8.0, 60.0),
+    "cutter_relative_speed_mps": (-5.0, 15.0),
+    "front_gap_m": (25.0, 100.0),
     "front_relative_speed_mps": (-12.0, 5.0),
     "escape_gap_length_m": (8.0, 40.0),
 }

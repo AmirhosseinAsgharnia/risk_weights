@@ -13,5 +13,9 @@ stable-baselines3==2.9.0
 #   pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
 torch==2.13.0
 
+# Feasibility-surrogate pipeline (learning/feasibility_surrogate.py) -- tabular classifiers +
+# grouped cross-validation/calibration metrics; joblib (model persistence) ships with scikit-learn.
+scikit-learn==1.9.0
+
 # Tests (pyproject.toml configures pytest; see tests/)
 pytest==9.1.1

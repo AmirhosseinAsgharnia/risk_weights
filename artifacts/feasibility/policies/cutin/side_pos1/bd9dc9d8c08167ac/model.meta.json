@@ -1,0 +1,52 @@
+{
+  "scenario_family": "cutin",
+  "scenario_id": "bd9dc9d8c08167ac",
+  "blocker_side": 1,
+  "mode": "robust",
+  "scenario_seed": 2418886936,
+  "theta": {
+    "road_mu": 0.9539047578650905,
+    "road_kappa_max": 0.00024196777422003592,
+    "s_cutin_m": 366.60880660269635,
+    "cutter_gap_m": 50.753314882911475,
+    "cutter_relative_speed_mps": -0.849484924411585,
+    "front_gap_m": 57.93614337263023,
+    "front_relative_speed_mps": 1.6473295670666204,
+    "escape_gap_length_m": 33.451627354617685
+  },
+  "goal_distance_m": 400.0,
+  "max_episode_seconds": 35.0,
+  "min_progress_m": 100.0,
+  "ppo_seed": null,
+  "timesteps_budget": 2000000,
+  "timesteps_actual": 1300000,
+  "stop_reason": "early stopping: no improvement over 5 held-out evaluations (each 20 episodes) after 5 minimum evals",
+  "n_envs": 4,
+  "evaluated_checkpoint": "best",
+  "best_checkpoint": "artifacts/feasibility/policies/cutin/side_pos1/bd9dc9d8c08167ac/model_best/best_model.zip",
+  "final_checkpoint": "artifacts/feasibility/policies/cutin/side_pos1/bd9dc9d8c08167ac/model_final.zip",
+  "evaluation": {
+    "episodes": 100,
+    "deterministic": true,
+    "eval_seed": null,
+    "summary": {
+      "n_episodes": 100,
+      "n_success": 100,
+      "n_safety_failures": 0,
+      "n_collisions": 0,
+      "n_rollovers": 0,
+      "n_offroad": 0,
+      "n_timeouts": 0,
+      "success_rate": 1.0,
+      "mean_return": 124.63740525716594,
+      "std_return": 0.1641090027333565,
+      "mean_success_time_s": 22.86650000000019,
+      "wilson_95ci": [
+        0.9630065017930143,
+        1.0
+      ],
+      "repeatability": "OK",
+      "meets_threshold": true
+    }
+  }
+}
