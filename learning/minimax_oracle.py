@@ -22,6 +22,7 @@ retrains) -- the original feasibility datasets are never touched, and the
 global surrogate is never refit automatically.
 """
 
+import functools
 import json
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
@@ -42,6 +43,8 @@ class OracleRefinementConfig:
     selection_episodes: int = 50
     validation_episodes: int = 100
     validation_worker_rank: int = 2_000_000
+    rollover_event: str = "physical_v2"   # EgoTrafficEnv ROLLOVER detector for training + validation
+                                          # (learning.vehicle_physics; never mix with legacy_v1 evidence)
 
     @staticmethod
     def from_dict(d: dict) -> "OracleRefinementConfig":
@@ -56,13 +59,14 @@ def _default_train_fn(family, cfg, params, verbose=0):
     return train_and_evaluate(family, cfg, params, verbose=verbose)
 
 
-def _default_validate_fn(model_path: str, spec: ScenarioSpec, cfg_seed: int, episodes: int, worker_rank: int) -> list[dict]:
+def _default_validate_fn(model_path: str, spec: ScenarioSpec, cfg_seed: int, episodes: int, worker_rank: int,
+                         rollover_event: str = "physical_v2") -> list[dict]:
     from stable_baselines3 import PPO
     from learning.env import EgoTrafficEnv
     from learning.eval_batch import run_episodes
     model = PPO.load(model_path, device="cpu")
     env = EgoTrafficEnv(arena=FAMILIES[spec.family][1](spec.config(seed=cfg_seed)), mode="distribution",
-                        worker_rank=worker_rank)
+                        worker_rank=worker_rank, rollover_event=rollover_event)
     return run_episodes(model, env, episodes, deterministic=True)
 
 
@@ -71,7 +75,7 @@ class OracleRefiner:
         self.config = config
         self.out_dir = Path(out_dir)
         self.train_fn = train_fn or _default_train_fn
-        self.validate_fn = validate_fn or _default_validate_fn
+        self.validate_fn = validate_fn or functools.partial(_default_validate_fn, rollover_event=config.rollover_event)
         self.n_used = 0
 
     def result_path(self, spec: ScenarioSpec) -> Path:
@@ -97,7 +101,8 @@ class OracleRefiner:
                 out = path.parent / spec.scenario_id / f"ppo_seed{s}" / "model"
                 out.parent.mkdir(parents=True, exist_ok=True)
                 params = RunParams(out=str(out), timesteps=self.config.timesteps, n_envs=self.config.n_envs,
-                                   ppo_seed=s, episodes=self.config.selection_episodes, force=True)
+                                   ppo_seed=s, episodes=self.config.selection_episodes, force=True,
+                                   rollover_event=self.config.rollover_event)
                 meta = self.train_fn(spec.family, cfg, params, verbose=0)
                 summ = meta["evaluation"]["summary"]
                 seeds.append({"ppo_seed": s, "model": str(out), "selection_success_rate": summ["success_rate"],

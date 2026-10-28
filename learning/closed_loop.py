@@ -180,6 +180,9 @@ def build_controller(spec: dict, w):
     name = spec["name"]
     if name == "mpc":
         return SamplingMPC(MPCConfig.from_dict(spec.get("config", {})), MPCWeights.from_vector(w))
+    if name == "paralo_mpc":
+        from learning.paralo_mpc import ParaloMPC, ParaloMPCConfig, ParaloWeights
+        return ParaloMPC(ParaloMPCConfig.from_dict(spec.get("config", {})), ParaloWeights.from_vector(w))
     if name == "constant":   # test stub: w = (accel, delta)
         return ConstantController(float(w[0]), float(w[1]))
     raise ValueError(f"unknown controller {name!r}")

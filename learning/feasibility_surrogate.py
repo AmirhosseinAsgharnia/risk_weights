@@ -236,6 +236,9 @@ class SurrogateArtifact:
     report: ModelReport
     preliminary: bool   # True whenever n_scenarios is small enough that this should not be
                          # presented as a finished result -- see PRELIMINARY_SCENARIO_THRESHOLD
+    provenance: dict = field(default_factory=dict)   # dataset curation record (learning.feasibility_audit):
+                                                      # bounds version, rollover event model, included /
+                                                      # excluded rows and why
 
     def predict(self, theta: dict[str, float]) -> dict:
         """p_hat, a bootstrap-derived epistemic interval, and an
@@ -274,7 +277,7 @@ PRELIMINARY_SCENARIO_THRESHOLD = 50   # below this many distinct thetas, every a
 
 def fit_surrogate(
         family: str, blocker_side: int, rollout_records: list[dict], bounds: dict[str, tuple[float, float]],
-        *, n_splits: int = 5, n_bootstrap: int = 200, bootstrap_seed: int = 0,
+        *, n_splits: int = 5, n_bootstrap: int = 200, bootstrap_seed: int = 0, provenance: dict | None = None,
 ) -> SurrogateArtifact:
     """Compare candidates (evaluate_candidates), refit the best one on the
     FULL dataset, build its bootstrap ensemble, and return one persistable
@@ -307,5 +310,5 @@ def fit_surrogate(
     return SurrogateArtifact(
         family=family, blocker_side=blocker_side, model_name=best.name, model=final_model,
         bootstrap_models=bootstrap_models, theta_bounds=dict(bounds), n_scenarios=n_scenarios,
-        n_rollouts=len(rows), report=best, preliminary=preliminary,
+        n_rollouts=len(rows), report=best, preliminary=preliminary, provenance=dict(provenance or {}),
     )

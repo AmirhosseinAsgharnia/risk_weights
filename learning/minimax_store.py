@@ -30,7 +30,8 @@ from learning.feasibility_dataset import _atomic_write_bytes, _append_line, read
 
 # Config keys that may change on resume without changing the science (budgets, parallelism, paths).
 NON_SCIENTIFIC_KEYS = ("n_workers", "artifacts_root", "experiment_id")
-NON_SCIENTIFIC_EXCHANGE_KEYS = ("max_iterations", "max_wall_s", "max_oracle_evals", "stagnation_iterations")
+NON_SCIENTIFIC_EXCHANGE_KEYS = ("max_iterations", "max_wall_s", "max_oracle_evals", "stagnation_iterations",
+                                "max_scenario_evals")   # the last: learning.constrained_pipeline's budget
 
 
 def canonical_hash(obj) -> str:

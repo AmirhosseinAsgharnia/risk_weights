@@ -45,7 +45,7 @@ import numpy as np
 from learning.closed_loop import (
     EVALUATOR_VERSION, EvalCostConfig, ScenarioSpec, Stratum, run_episode_jobs, summarize_episodes,
 )
-from learning.feasibility_common import SCHEMA_VERSION
+from learning.feasibility_common import SCHEMA_VERSION, ScenarioFamilyConfigError
 from learning.feasibility_dataset import read_jsonl
 from learning.minimax_adversary import AdversaryConfig, ScenarioAdversary
 from learning.minimax_core import (
@@ -152,12 +152,17 @@ class Experiment:
         orc = OracleRefinementConfig.from_dict(config["oracle_refinement"])
         self.refiner = (OracleRefiner(orc, store.path("oracle"), train_fn=train_fn, validate_fn=validate_fn)
                         if orc.enabled else None)
-        pool = []
+        pool, self.pool_skipped_invalid = [], []
         if config["seed_pool_dataset"]:
             # PPO-demonstrated dataset scenarios are admitted on that oracle evidence (Wilson rule), not re-screened
             rows = read_jsonl(Path(config["seed_pool_dataset"]))
             kn = {r["scenario_id"]: (r["k"], r["n"]) for r in rows}
             for s in demonstrated_scenarios_from_dataset(rows, sc.tau_demonstrated):
+                try:
+                    s.validate()   # rows sampled under older theta bounds (learning.feasibility_audit) are skipped
+                except ScenarioFamilyConfigError:
+                    self.pool_skipped_invalid.append(s.key)
+                    continue
                 if s.stratum in self.strata:
                     self.screen.record_oracle_evidence(s, *kn[s.scenario_id], source=config["seed_pool_dataset"])
                     pool.append(s)
@@ -209,7 +214,7 @@ class Experiment:
             "git_commit": git_commit(), "created_unix": time.time(), "evaluator_version": EVALUATOR_VERSION,
             "scenario_schema_version": SCHEMA_VERSION, "w_names": list(W_NAMES),
             "surrogates": self.screen.identities, "screening": self.config["screening"],
-            "realization_seeds": self.seeds,
+            "realization_seeds": self.seeds, "seed_pool_skipped_invalid": self.pool_skipped_invalid,
             "note": "Empirical minimax over PPO-screened scenarios; no robustness certificate is implied."})
 
     def check_manifest(self) -> None:

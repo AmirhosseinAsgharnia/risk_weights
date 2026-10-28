@@ -111,6 +111,10 @@ class RunParams:
     episodes: int = 100
     eval_seed: int | None = None
     stochastic: bool = False
+    rollover_event: str = "physical_v2"   # EgoTrafficEnv's ROLLOVER detector for training AND evaluation
+                                          # (learning.vehicle_physics). Rows written before this field existed
+                                          # used "legacy_v1" (P_roll(v, delta_cmd) > 0.5 -- known false
+                                          # positives; docs/physics_audit.md). Stamped into meta.json.
     return_rollout_details: bool = False   # see train_and_evaluate's own docstring -- opt-in,
                                             # keeps this file's CLI/meta.json output unchanged by default
     torch_threads: int = 1   # PyTorch defaults to spinning up threads across every available core for
@@ -185,7 +189,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
 
     def make_env(rank: int):
         def _init():
-            return EgoTrafficEnv(arena=runtime_cls(cfg), mode="fixed", worker_rank=rank)
+            return EgoTrafficEnv(arena=runtime_cls(cfg), mode="fixed", worker_rank=rank,
+                                 rollover_event=params.rollover_event)
         return _init
 
     vec_env = SubprocVecEnv([make_env(i) for i in range(params.n_envs)])
@@ -199,7 +204,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         # scenario realizations PPO is actually training on -- a real held-out set, not a relabeled
         # training episode. mode="distribution" so each periodic eval sees fresh realizations too,
         # not one repeated fixed episode.
-        early_stop_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=1_000_000)
+        early_stop_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=1_000_000,
+                                       rollover_event=params.rollover_event)
         stop_on_plateau = StopTrainingOnNoModelImprovement(
             max_no_improvement_evals=params.patience, min_evals=params.min_evals, verbose=verbose)
         callback = EvalCallback(
@@ -237,7 +243,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         model.save(params.out)
         evaluated_checkpoint = "final"
 
-    meta = {**resolved, "ppo_seed": params.ppo_seed, "timesteps_budget": params.timesteps,
+    meta = {**resolved, "rollover_event_model": params.rollover_event, "ppo_seed": params.ppo_seed, "timesteps_budget": params.timesteps,
             "timesteps_actual": int(model.num_timesteps), "stop_reason": stop_reason,
             "n_envs": params.n_envs, "evaluated_checkpoint": evaluated_checkpoint,
             "best_checkpoint": best_path if os.path.exists(best_path) else None,
@@ -245,7 +251,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
 
     results = None
     if params.episodes > 0:
-        eval_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=0)
+        eval_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=0,
+                                 rollover_event=params.rollover_event)
         if params.eval_seed is not None:
             eval_model.set_random_seed(params.eval_seed)
         results = run_episodes(eval_model, eval_env, params.episodes, deterministic=not params.stochastic)
@@ -320,6 +327,7 @@ def main():
     parser.add_argument("--stochastic", action="store_true",
                          help="sample actions during evaluation instead of using the policy's "
                               "deterministic mean (default: deterministic).")
+    parser.add_argument("--rollover-event", choices=["legacy_v1", "physical_v2"], default=RunParams.rollover_event)
     args = parser.parse_args()
 
     cfg = _build_config(args)
@@ -329,7 +337,7 @@ def main():
         no_early_stop=args.no_early_stop,
         eval_freq_timesteps=args.eval_freq_timesteps, patience_episodes=args.patience_episodes,
         patience=args.patience, min_evals=args.min_evals, episodes=args.episodes,
-        eval_seed=args.eval_seed, stochastic=args.stochastic,
+        eval_seed=args.eval_seed, stochastic=args.stochastic, rollover_event=args.rollover_event,
     )
     train_and_evaluate(args.scenario_family, cfg, params, verbose=1)
 

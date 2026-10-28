@@ -57,6 +57,7 @@ from controllers.mobil import MobilParams
 from controllers.far_near import clip_steering_rate
 from initialization.traffic_init import generate_traffic, CAR_LENGTH, CAR_WIDTH, TEMPLATE_EGO_LANE
 from risks.rollover import rollover, TrajectoryStep as RolloverStep
+from learning.vehicle_physics import ROLLOVER_EVENT_MODELS, rollover_physical_v2, tire_state
 from learning.scenario import ScenarioConfig, generate_scenario, derive_seed
 
 
@@ -222,6 +223,7 @@ class EgoTrafficEnv(gym.Env):
             max_steering_rate: float = MAX_STEERING_RATE,
             max_jerk: float = MAX_JERK,
             arena=None,
+            rollover_event: str = "legacy_v1",
     ):
         """
         scenario_config: if given, every reset() instead realizes this
@@ -286,6 +288,14 @@ class EgoTrafficEnv(gym.Env):
         `arena.extra_info()` into info["arena"]. goal_distance_m/
         max_episode_seconds/min_progress_m are read off `arena` exactly
         like ScenarioConfig's own fields (see reset()).
+
+        rollover_event: which ROLLOVER detector terminates the episode
+        (learning.vehicle_physics). "legacy_v1" (default, so every historical
+        run reproduces exactly): P_roll(v_x, delta_cmd) > ROLLOVER_PROB_THRESHOLD
+        -- known to fire at ~2 m/s^2 real lateral acceleration on the default
+        curve (docs/physics_audit.md §A2). "physical_v2": realized lateral
+        acceleration |(F_yf + F_yr)/m| >= SSF g (quasi-static tipping onset).
+        info["rollover_event_model"] reports which one ran.
         """
         if scenario_config is not None and arena is not None:
             raise ValueError("EgoTrafficEnv: scenario_config and arena are mutually exclusive.")
@@ -302,6 +312,8 @@ class EgoTrafficEnv(gym.Env):
         self.worker_rank = worker_rank
         self.max_steering_rate = max_steering_rate
         self.max_jerk = max_jerk
+        assert rollover_event in ROLLOVER_EVENT_MODELS, rollover_event
+        self.rollover_event = rollover_event
         self._episode_counter = 0
         self._realized_scenario: dict | None = None
 
@@ -491,7 +503,8 @@ class EgoTrafficEnv(gym.Env):
 
         collided = self._ego_collided()
         p_roll = self._ego_p_rollover()
-        rolled_over = p_roll > ROLLOVER_PROB_THRESHOLD
+        rolled_over = (p_roll > ROLLOVER_PROB_THRESHOLD if self.rollover_event == "legacy_v1"
+                       else rollover_physical_v2(self.ego_tire_state(), self.ego_car.vehicle_params))
         off_road = self._ego_off_road()
         scenario_goal_reached = self._ego_goal_reached()
 
@@ -558,6 +571,7 @@ class EgoTrafficEnv(gym.Env):
             "min_clearance_m": None if math.isinf(self._min_clearance) else self._min_clearance,
             "max_p_rollover": self._max_p_rollover,
             "max_road_departure_m": self._max_departure,
+            "rollover_event_model": self.rollover_event,
         }
         if self.arena is not None:
             # Family-specific diagnostics (event trigger station/time, phase classification, etc.)
@@ -629,6 +643,13 @@ class EgoTrafficEnv(gym.Env):
         p_roll, _ = rollover([RolloverStep(v = state.v_x, delta = state.delta)],
                               vehicle_params = self.ego_car.vehicle_params)
         return p_roll
+
+    def ego_tire_state(self):
+        """Realized tire forces / lateral acceleration at ego's current state (learning.vehicle_physics.
+        tire_state, read off CarDynamics with the last APPLIED accel/delta and the road at ego's s)."""
+        st = self.ego_car.state
+        kappa = -self.road.lanes[st.lane].kappa[self.road.index_at(st.s)]   # type: ignore
+        return tire_state(st.as_array(), self._prev_accel, st.delta, kappa, self.road.mu, self.ego_car.vehicle_params)
 
     def _ego_off_road(self) -> bool:
         """True once ego's body has drifted entirely off the paved road --

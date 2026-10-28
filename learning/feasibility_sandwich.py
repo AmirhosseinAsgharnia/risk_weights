@@ -50,6 +50,8 @@ _SPEED_PERTURB_MPS = 0.5
 _GAP_CENTER_PERTURB_M = 1.0   # blocker-gap center, per spec
 _EVENT_PERTURB_M = 2.0
 
+# Bump on ANY change to THETA_BOUNDS_SANDWICH; learning.feasibility_audit keeps the full history.
+THETA_BOUNDS_VERSION_SANDWICH = "sandwich-bounds-v1"
 THETA_BOUNDS_SANDWICH: dict[str, tuple[float, float]] = {
     "road_mu": (0.4, 1.0),
     "road_kappa_max": (0.0, 0.02),

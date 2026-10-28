@@ -53,8 +53,9 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-from learning.feasibility_cutin import CutinConfig, THETA_BOUNDS_CUTIN
-from learning.feasibility_sandwich import SandwichConfig, THETA_BOUNDS_SANDWICH
+from learning.feasibility_cutin import CutinConfig, THETA_BOUNDS_CUTIN, THETA_BOUNDS_VERSION_CUTIN
+from learning.feasibility_sandwich import SandwichConfig, THETA_BOUNDS_SANDWICH, THETA_BOUNDS_VERSION_SANDWICH
+from learning.minimax_store import git_commit
 from learning.feasibility_sampling import sample_cutin, sample_sandwich
 from learning.feasibility_train_one import RunParams, train_and_evaluate
 from learning.feasibility_dataset import (
@@ -70,6 +71,9 @@ _BENCHMARK_CONFIGS = {"cutin": CutinConfig, "sandwich": SandwichConfig}
 
 def _side_label(blocker_side: int) -> str:
     return "pos1" if blocker_side == 1 else "neg1"
+
+
+CURRENT_BOUNDS_VERSION = {"cutin": THETA_BOUNDS_VERSION_CUTIN, "sandwich": THETA_BOUNDS_VERSION_SANDWICH}
 
 
 def _policy_out_path(root: Path, family: str, blocker_side: int, scenario_id: str) -> Path:
@@ -89,6 +93,9 @@ def _scenario_record_from_result(family: str, blocker_side: int, cfg, meta: dict
         "mean_success_time_s": summary.get("mean_success_time_s"),
         "checkpoint": meta.get("evaluated_checkpoint"), "stop_reason": meta.get("stop_reason"),
         "timesteps_actual": meta.get("timesteps_actual"), "ppo_seed": meta.get("ppo_seed"),
+        # provenance (docs/physics_audit.md): rows without these fields predate them -- see learning.feasibility_audit
+        "rollover_event_model": meta.get("rollover_event_model"),
+        "theta_bounds_version": CURRENT_BOUNDS_VERSION[family], "git_commit": git_commit(),
     }
 
 
@@ -238,14 +245,21 @@ def run_campaign(
 def run_fit_only(family: str, blocker_side: int, out_path: str, *,
                   n_splits: int = 5, n_bootstrap: int = 200, bootstrap_seed: int = 0,
                   root: Path = ARTIFACTS_ROOT) -> None:
-    records = read_jsonl(rollouts_path(family, blocker_side, root))
+    # Never fits on the raw jsonl: rows from older bound versions, or whose labels came from the
+    # legacy rollover event, are excluded/replaced by learning.feasibility_audit's curation.
+    from learning.feasibility_audit import curated_dataset
+    cur = curated_dataset(family, blocker_side, root=root)
+    records = cur["rollouts"]
     if not records:
-        raise SystemExit(f"no rollout records found for family={family} blocker_side={blocker_side} "
-                          f"under {root} -- run `--mode run` first.")
+        raise SystemExit(f"no usable rollout records for family={family} blocker_side={blocker_side} under {root} "
+                          f"after curation ({cur['n_excluded']} rows excluded) -- see learning.feasibility_audit.")
     bounds = _THETA_BOUNDS[family]
     artifact = fit_surrogate(family, blocker_side, records, bounds,
-                              n_splits=n_splits, n_bootstrap=n_bootstrap, bootstrap_seed=bootstrap_seed)
+                              n_splits=n_splits, n_bootstrap=n_bootstrap, bootstrap_seed=bootstrap_seed,
+                              provenance=cur["provenance"])
     artifact.save(out_path)
+    print(f"Curated dataset: {cur['n_included']} rows included, {cur['n_excluded']} excluded "
+          f"({cur['provenance']['exclusion_reasons']})")
 
     print(f"Best model: {artifact.model_name}")
     print(f"  Brier={artifact.report.brier:.4f}  log_loss={artifact.report.log_loss:.4f}  "
@@ -301,6 +315,7 @@ def main():
     parser.add_argument("--patience", type=int, default=RunParams.patience)
     parser.add_argument("--min-evals", type=int, default=RunParams.min_evals)
     parser.add_argument("--no-early-stop", action="store_true")
+    parser.add_argument("--rollover-event", choices=["legacy_v1", "physical_v2"], default=RunParams.rollover_event)
 
     # fit-only
     parser.add_argument("--surrogate-out", type=str, default=None)
@@ -323,6 +338,7 @@ def main():
             eval_freq_timesteps=args.eval_freq_timesteps,
             patience_episodes=args.patience_episodes,
             patience=args.patience, min_evals=args.min_evals, no_early_stop=args.no_early_stop,
+            rollover_event=args.rollover_event,
         )
         run_campaign(args.scenario_family, args.blocker_side, args.n_thetas, args.sampling_seed,
                      args.concurrency, params_template, doe_method=args.doe_method,
