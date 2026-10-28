@@ -1,0 +1,12 @@
+{
+  "experiment_id": "c_smoke",
+  "seed": 0,
+  "strata": [{"family": "cutin", "blocker_side": 1, "surrogate": null}],
+  "screening": {"policy": "none"},
+  "realization_seeds": [1000],
+  "master": {"n_init": 2, "n_starts": 1, "maxfev_per_start": 3},
+  "exchange": {"max_iterations": 2},
+  "adversary": {"n_global": 3, "max_global_evals": 2, "local_top": 1, "n_local": 1},
+  "heldout": {"sampling_seed": 10000, "n_per_stratum": 2, "realization_seeds": [5000]},
+  "n_workers": 4
+}

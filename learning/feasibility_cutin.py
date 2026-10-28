@@ -62,6 +62,8 @@ _PCT_PERTURB = 0.05       # +/-5% on critical longitudinal positions/gaps
 _SPEED_PERTURB_MPS = 0.5  # +/-0.5 m/s on critical relative speeds
 _EVENT_PERTURB_M = 2.0    # +/-2m on the realized event station (s_cutin)
 
+# Bump on ANY change to THETA_BOUNDS_CUTIN; learning.feasibility_audit keeps the full history.
+THETA_BOUNDS_VERSION_CUTIN = "cutin-bounds-v1"
 THETA_BOUNDS_CUTIN: dict[str, tuple[float, float]] = {
     "road_mu": (0.4, 1.0),
     "road_kappa_max": (0.0, 0.02),

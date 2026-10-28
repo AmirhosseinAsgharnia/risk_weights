@@ -486,6 +486,7 @@ These were each settled deliberately, several after a real bug or an explicit co
 
 1. **Runner C:** for one θ, train and evaluate it fresh, then compare the empirical rate and Wilson CI with `SurrogateArtifact.predict(θ)`. It would reuse `train_and_evaluate`. The planned shape is in `feasibility_pipeline.md`, Case 6.
 2. ~~The `min_w max_θ` controller-weight search.~~ **Now implemented** (with a *proposed* sampling MPC, a fixed external cost J_eval and surrogate screening). See [minimax_design.md](minimax_design.md). The MPC design and the J_eval coefficients are still open research decisions.
+   - **Redesign (2026-10-27):** a PARALO-based MPC tuned by *constrained* minimax, with worst-case progress subject to physical event-rate and peak constraints and no evaluation weights. See [constrained_design.md](constrained_design.md). The original pipeline is kept as the baseline.
 
 **Suggested immediate work**
 

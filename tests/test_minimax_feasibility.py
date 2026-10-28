@@ -132,11 +132,19 @@ def test_single_class_surrogate_fallback(tmp_path):
     assert d.p_hat == pytest.approx(1.0) and d.status == ADMITTED
 
 
-def test_demonstrated_scenarios_from_existing_dataset():
-    path = Path("artifacts/feasibility/datasets/cutin/side_pos1/scenarios.jsonl")
-    rows = [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+def _ppo_rows():
+    """A synthetic PPO scenarios.jsonl: two demonstrated rows, one not, one demonstrated but sampled
+    under the older cutin-bounds-v0 (front_gap_m = 10 is outside the current [25, 100])."""
+    th = CutinConfig().theta()
+    row = lambda name, k, **t: {"scenario_id": ScenarioSpec.make(CUTIN1, {**th, **t}).scenario_id, "family": "cutin",
+                                "blocker_side": 1, "mode": "robust", "k": k, "n": 100, "theta": {**th, **t}}
+    return [row("a", 98), row("b", 95, front_gap_m=80.0), row("c", 40, front_gap_m=50.0), row("old", 99, front_gap_m=10.0)]
+
+
+def test_demonstrated_scenarios_from_dataset():
+    rows = _ppo_rows()
     specs = demonstrated_scenarios_from_dataset(rows, 0.8)
     expected = sum(demonstrated(r["k"], r["n"], 0.8) for r in rows)
-    assert len(specs) == expected > 0
+    assert len(specs) == expected == 3
     assert all(s.stratum == CUTIN1 for s in specs)
     assert {s.scenario_id for s in specs} <= {r["scenario_id"] for r in rows}   # ids match the PPO dataset

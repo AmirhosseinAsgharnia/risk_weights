@@ -164,12 +164,19 @@ def test_failed_refinement_leaves_scenario_unverified(tmp_path):
 
 
 def test_seed_pool_is_admitted_on_dataset_oracle_evidence(tmp_path):
-    cfg = _cfg(tmp_path, seed_pool_dataset="artifacts/feasibility/datasets/cutin/side_pos1/scenarios.jsonl")
-    exp = Experiment(cfg, ExperimentStore(tmp_path, "t"))
-    assert exp.adversary.pool
+    th = CutinConfig().theta()
+    rows = [{"scenario_id": ScenarioSpec.make(CUTIN1, {**th, **t}).scenario_id, "family": "cutin", "blocker_side": 1,
+             "mode": "robust", "k": k, "n": 100, "theta": {**th, **t}} for _, k, t in [("a", 98, {}), ("b", 95, {"front_gap_m": 80.0}), ("c", 40, {"front_gap_m": 50.0}),
+                                                     ("old", 99, {"front_gap_m": 10.0})]]   # "old": cutin-bounds-v0
+    path = tmp_path / "scenarios.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    exp = Experiment(_cfg(tmp_path, seed_pool_dataset=str(path)), ExperimentStore(tmp_path, "t"))
+    assert len(exp.adversary.pool) == 2
     for s in exp.adversary.pool:
         d = exp.screen.classify(s)
         assert d.status == ADMITTED and d.evidence == "oracle" and d.lower >= 0.8
+        s.validate()                                   # out-of-bounds (older bound version) rows never enter
+    assert len(exp.pool_skipped_invalid) == 1
 
 
 # -- end-to-end on the real simulator (tiny budgets) --

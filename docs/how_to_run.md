@@ -8,6 +8,11 @@ This guide lists the steps in order. Each step says what it does, the command to
 
 Run every command from the repository root. All commands fit on one line.
 
+There are two tuning pipelines. Both share steps 0 and 3–5 (setup, PPO data, surrogates):
+
+- **Part A** (steps 1–2 and 6–10): the original MPC, scored by one weighted cost J_eval. It is kept as the baseline.
+- **[Part B](#part-b--constrained-minimax-paralo-mpc)**: the PARALO MPC, tuned for worst-case progress subject to physical safety and comfort constraints, with no evaluation weights. Its design is in [constrained_design.md](constrained_design.md).
+
 ```
  0. Setup               install, run the tests
  1. Pilot               toy check + choose n_workers                   (minutes)
@@ -114,20 +119,36 @@ python -m learning.feasibility_pipeline --mode run --scenario-family cutin --blo
 Things to know:
 
 - `--n-thetas` **adds** that many new scenarios. It is not a target total. Use a **new `--sampling-seed`** for each extra batch.
-- With fewer than 50 scenarios, the surrogate is marked `PRELIMINARY`. There are 24 for `cutin +1` today. With so few, a conservative screen leaves about 85 % of candidates `UNCERTAIN`. Aim for at least 100 per stratum.
+- With fewer than 50 scenarios, the surrogate is marked `PRELIMINARY`. With so few, a conservative screen leaves most candidates `UNCERTAIN`. Aim for at least 100 per stratum.
+- **There is no PPO data at the moment.** The old `cutin +1` dataset was deleted on 2026-10-28; its labels came from the legacy rollover detector (see [physics_audit.md](physics_audit.md)). Every stratum starts from scratch.
+- New runs train and evaluate with the corrected rollover event (`--rollover-event physical_v2`, the default). Every dataset row records its `rollover_event_model`, `theta_bounds_version` and `git_commit`. Never append `legacy_v1` rows to a `physical_v2` dataset.
 - Results are written to `artifacts/feasibility/datasets/<family>/side_pos1|side_neg1/`.
 
 For the other strata, change `--scenario-family` and `--blocker-side`, for example `--scenario-family sandwich --blocker-side -1`.
 
 ---
 
-## Step 4 — Fit the surrogate (per stratum)
+## Step 4 — Audit, fit and validate the surrogate (per stratum)
+
+**4a. Audit the dataset.** This writes `audit_dataset-audit-v1.jsonl` next to the data and never edits the data itself. It marks every row as included or excluded, and says why:
+
+```bash
+python -m learning.feasibility_audit --mode audit --scenario-family cutin --blocker-side 1
+```
+
+**4b. Fit.** The fit only uses rows the audit included. Rows outside the current θ bounds, or whose labels came from the legacy rollover event, are left out. The curation record is stored inside the artifact as `provenance`.
 
 ```bash
 python -m learning.feasibility_pipeline --mode fit-only --scenario-family cutin --blocker-side 1 --surrogate-out artifacts/feasibility/surrogates/cutin_side1.joblib
 ```
 
-**Check:** the printed report shows the number of scenarios, the cross-validated metrics, and whether the fit is `PRELIMINARY`.
+**4c. Validate the admission decisions.** This uses grouped cross-validation and reports how often the surrogate admits scenarios PPO could not demonstrate (false admissions) and rejects ones it could (false rejections), together with calibration:
+
+```bash
+python -m learning.feasibility_audit --mode validate --scenario-family cutin --blocker-side 1
+```
+
+**Check:** look at the number of scenarios, the cross-validated metrics, whether the fit is `PRELIMINARY`, and the false-admission and false-rejection counts.
 
 The file name must match the `surrogate` path in your minimax config. The shipped configs expect these names:
 
@@ -297,3 +318,101 @@ artifacts/minimax/experiments/<experiment_id>/
 | Almost every candidate is `UNCERTAIN` | The surrogate has too little data. Add more PPO data (step 3), or for exploration only, use `--set screening.policy='"point"'`. |
 | Risk cost is mostly slippage | This is expected with the current vehicle parameters. See [minimax_design.md §9](minimax_design.md#9-known-limitations-and-open-research-decisions). Lower it with `--set cost.beta_slippage=…`. |
 | Tests fail with `ModuleNotFoundError: yaml` | Prefix the test command with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`. |
+
+---
+
+# Part B — Constrained minimax (PARALO MPC)
+
+This pipeline finds one PARALO-MPC weight vector w that minimizes the worst-case **progress shortfall** over PPO-admitted scenarios. It is subject to explicit **physical constraints**: event rates and peak accelerations, each with its own threshold. No evaluation weights are involved.
+
+Do steps 0 and 3–5 of Part A first. You need a fitted and validated surrogate for every stratum you screen.
+
+Every evaluation uses the corrected physics ([physics_audit.md](physics_audit.md)):
+
+- `"event_model": "physical_v2"`: rollover means realized |a_y| ≥ SSF·g.
+- Slippage means a tire reaches its friction limit sideways, or the combined braking-plus-cornering demand exceeds the friction circle.
+- The PARALO MPC passes PARALO the steering angle that matches its *predicted* yaw rate (δ_eq).
+- The MPC knows the true road μ (`friction_mode: "oracle"`). Other friction modes exist for later sensitivity studies.
+- `"objective": "completion_time"` is an optional alternative objective. Use it if progress shortfall sits at 0 for most scenarios and cannot tell weight vectors apart.
+- `"oracle_refinement": {"enabled": true, ...}` sends uncertain but informative candidates to PPO for direct evidence.
+
+**B0 (optional): check the risk models and controller capability first.**
+
+```bash
+python -m learning.risk_validation --out artifacts/physics_validation --workers 12
+```
+
+```bash
+python -m learning.capability_suite --out artifacts/physics_validation
+```
+
+## B1 — Smoke run (no surrogate, ~25 s)
+
+```bash
+python -m learning.constrained_pipeline --mode optimize --config configs/constrained/smoke_unscreened.json
+```
+
+**Check:** the run prints a summary with a `status`. With this tiny budget, `no_feasible_found` is a normal result. Delete `artifacts/constrained/experiments/c_smoke` before running it again.
+
+## B2 — Look at the constraints before a real run
+
+The constraints are listed in the config under `"constraints"`, or taken from the defaults in `learning/physical_eval.py` (`DEFAULT_CONSTRAINTS`). Every shipped threshold is **provisional**. `"threshold": null` means *monitored only*: the value is reported but never enforced.
+
+| Constraint | Default |
+|---|---|
+| collision, rollover, road-departure, slippage rate | 0 |
+| peak lateral acceleration | 4 m/s² |
+| lane-departure rate, peak jerk, peak acceleration | monitored only |
+
+The reasons are in [constrained_design.md §4](constrained_design.md#4-physical-evaluation-learningphysical_evalpy).
+
+To use your own constraints, put a `"constraints"` list in the config. The list **replaces** the defaults rather than merging with them. Each entry looks like this:
+
+```json
+{"name": "collision", "metric": "collision_rate", "threshold": 0.0, "units": "1/episode", "statistic": "point", "status": "provisional"}
+```
+
+## B3 — Optimize
+
+```bash
+python -m learning.constrained_pipeline --mode optimize --config configs/constrained/cutin_side1_screened.json --set n_workers=24
+```
+
+The run ends with one of these statuses:
+
+| Status | Meaning |
+|---|---|
+| `converged_feasible` | A w satisfied every enforced constraint on the working set, and the adversary found nothing worse |
+| `no_feasible_found` | No feasible w was found. `summary.json` lists the violated constraints, their worst scenarios, and `scenarios_never_satisfied`. **The constraints are never relaxed automatically.** |
+| `budget_exhausted` | No conclusion yet. Resume with a larger budget. |
+
+## B4 — Resume
+
+```bash
+python -m learning.constrained_pipeline --mode resume --experiment c_cutin_side1_v1 --set exchange.max_iterations=30
+```
+
+## B5 — Compare with the original MPC on held-out scenarios
+
+```bash
+python -m learning.constrained_pipeline --mode compare --experiment c_cutin_side1_v1 --label heldout
+```
+
+This evaluates four controllers with the same physical metrics, on the same new admitted scenarios and new seeds:
+
+- the original MPC under the **legacy** event definitions. This row is historical, has `primary_comparison: false`, and is not a safety result;
+- the original MPC under the corrected definitions;
+- the PARALO MPC at w₀;
+- the PARALO MPC at the best w found.
+
+It prints completion and event rates, worst and mean progress shortfall, peaks, and milliseconds per replan. The results are written to `evaluations/heldout.json`.
+
+## B6 — Report
+
+```bash
+python -m learning.constrained_pipeline --mode report --experiment c_cutin_side1_v1
+```
+
+This prints a per-iteration table and writes `plots/convergence.png`, which shows the worst shortfall and the worst value of each constraint over the iterations.
+
+Results go to `artifacts/constrained/experiments/<experiment_id>/`, with the same layout as Part A.
