@@ -32,7 +32,8 @@ improvement in mean return for --patience consecutive evaluations (each
 --eval-freq-timesteps apart, only after --min-evals have happened at all) --
 a deliberately cautious, patience-based rule so one lucky/unlucky evaluation
 can't stop or extend training on its own (see StopTrainingOnNoModelImprovement
-below). Pass --no-early-stop to always run the full --timesteps instead.
+below). Pass --no-early-stop to always run the full --timesteps instead; the
+best held-out checkpoint is still kept and evaluated.
 
 The FINAL training-state model is not necessarily the best one -- reward can
 (and does, in practice) dip after its peak before enough consecutive
@@ -204,25 +205,23 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
     vec_env = SubprocVecEnv([make_env(i) for i in range(params.n_envs)])
     model = PPO("MlpPolicy", vec_env, verbose=verbose, device=params.device, seed=params.ppo_seed, gamma=params.gamma)
 
-    callback = None
     stop_reason = "reached --timesteps"
-    if not params.no_early_stop:
-        # worker_rank=1_000_000: outside the training workers' own rank range, so
-        # derive_seed's SeedSequence-based stream for this held-out eval env never overlaps the
-        # scenario realizations PPO is actually training on -- a real held-out set, not a relabeled
-        # training episode. mode="distribution" so each periodic eval sees fresh realizations too,
-        # not one repeated fixed episode.
-        early_stop_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=1_000_000,
-                                       rollover_event=params.rollover_event)
-        stop_on_plateau = StopTrainingOnNoModelImprovement(
-            max_no_improvement_evals=params.patience, min_evals=params.min_evals, verbose=verbose)
-        callback = EvalCallback(
-            early_stop_env, callback_after_eval=stop_on_plateau,
-            best_model_save_path=f"{params.out}_best",
-            eval_freq=max(1, params.eval_freq_timesteps // params.n_envs),
-            n_eval_episodes=params.patience_episodes, deterministic=True, verbose=verbose)
+    # This evaluation always runs, because it picks the best checkpoint. --no-early-stop removes only the
+    # stopping rule. worker_rank=1_000_000: outside the training workers' own rank range, so derive_seed's
+    # SeedSequence-based stream for this held-out eval env never overlaps the scenario realizations PPO is
+    # actually training on -- a real held-out set, not a relabeled training episode. mode="distribution" so
+    # each periodic eval sees fresh realizations too, not one repeated fixed episode.
+    early_stop_env = EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=1_000_000,
+                                   rollover_event=params.rollover_event)
+    stop_on_plateau = None if params.no_early_stop else StopTrainingOnNoModelImprovement(
+        max_no_improvement_evals=params.patience, min_evals=params.min_evals, verbose=verbose)
+    callback = EvalCallback(
+        early_stop_env, callback_after_eval=stop_on_plateau,
+        best_model_save_path=f"{params.out}_best",
+        eval_freq=max(1, params.eval_freq_timesteps // params.n_envs),
+        n_eval_episodes=params.patience_episodes, deterministic=True, verbose=verbose)
 
-    callbacks = [callback] if callback is not None else []
+    callbacks = [callback]
     if params.metrics_path is not None:
         def make_validation_env():
             return EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=VALIDATION_RANK,
@@ -233,7 +232,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
                       ValidationCallback(make_validation_env, params.metrics_path, params.eval_freq_timesteps, episodes)]
 
     model.learn(total_timesteps=params.timesteps, callback=CallbackList(callbacks) if callbacks else None)
-    if callback is not None and model.num_timesteps < params.timesteps:
+    if not params.no_early_stop and model.num_timesteps < params.timesteps:
         stop_reason = (f"early stopping: no improvement over {params.patience} held-out evaluations "
                         f"(each {params.patience_episodes} episodes) after {params.min_evals} minimum evals")
     vec_env.close()
@@ -248,7 +247,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
     best_path = f"{params.out}_best/best_model.zip"
     final_path = f"{params.out}_final"
     model.save(final_path)
-    if callback is not None and os.path.exists(best_path):
+    if os.path.exists(best_path):
         # PPO.load()'s own `device` parameter defaults to "auto" -- independent of params.device --
         # so without this, the reloaded best checkpoint (the one actually used for final evaluation
         # and saved as <out>.zip) would silently ignore --device cpu and grab CUDA whenever available,
@@ -332,7 +331,7 @@ def main():
                          help="overwrite --out even if its existing .meta.json describes a different theta.")
 
     parser.add_argument("--no-early-stop", action="store_true",
-                         help="disable early stopping -- always train the full --timesteps.")
+                         help="disable early stopping -- always train the full --timesteps; the best checkpoint is still kept.")
     parser.add_argument("--eval-freq-timesteps", type=int, default=RunParams.eval_freq_timesteps,
                          help="how often (in total env-timesteps, i.e. already accounting for "
                               "--n-envs) to run a held-out evaluation for the early-stopping check.")

@@ -76,6 +76,8 @@ def scenario_row(rec: dict) -> dict:
     count = lambda reason: sum(r["failure_reason"] == reason for r in rolls)   # noqa: E731
     phys = [r.get("physical") or {} for r in rolls]
     lo, hi = wilson_ci(k, n) if independent else (None, None)
+    logged = all("traffic_crashes" in r for r in rolls)   # older records did not log it: unknown, not zero
+    traffic = [r for r in rolls if r["traffic_crashes"]] if logged else None
     peaks = [max(v for v in (p.get("peak_eta_front"), p.get("peak_eta_rear")) if v is not None)
              for p in phys if p.get("peak_eta_front") is not None and p.get("peak_eta_rear") is not None]
     statuses = {p.get("status", "unavailable") for p in phys}
@@ -88,6 +90,8 @@ def scenario_row(rec: dict) -> dict:
             "selection_rate": rec["selection"]["k"] / rec["selection"]["n"] if rec["selection"]["n"] else None,
             "repeatable": rec.get("repeatable"), "n_rollouts": n, "n_collision": count("collision"), "n_off_road": count("off_road"),
             "n_rollover": count("rollover"), "n_timeout": sum(bool(r["timeout"]) for r in rolls),
+            "n_traffic_crash": len(traffic) if logged else None,
+            "n_timeout_after_traffic_crash": sum(bool(r["timeout"]) for r in traffic) if logged else None,
             "mean_success_time_s": _mean(r["elapsed_s"] for r in rolls if r["success"]),
             "success_times_s": [r["elapsed_s"] for r in rolls if r["success"]], "progress": [r["episode_progress"] for r in rolls],
             "peak_tire_utilization": max(peaks) if peaks else None, "mean_peak_tire_utilization": _mean(peaks),
@@ -135,6 +139,7 @@ def table_a(rows: list[dict], scenarios: list[dict]) -> list[dict]:
     out = []
     for (stratum, reward, mode), g in sorted(groups.items()):
         n_roll = sum(r["n_rollouts"] for r in g)
+        logged = n_roll and all(r["n_traffic_crash"] is not None for r in g)
         counts = {s: sum(r["status"] == s for r in g) for s in (ADMITTED, UNCERTAIN, REJECTED)}
         stat = mode == "robust" or any(r["independent"] for r in g)
         times = [t for r in g for t in r["success_times_s"]]
@@ -146,6 +151,8 @@ def table_a(rows: list[dict], scenarios: list[dict]) -> list[dict]:
                     "rollout_road_departure_rate": sum(r["n_off_road"] for r in g) / n_roll if n_roll else None,
                     "rollout_rollover_rate": sum(r["n_rollover"] for r in g) / n_roll if n_roll else None,
                     "rollout_timeout_rate": sum(r["n_timeout"] for r in g) / n_roll if n_roll else None,
+                    "rollout_traffic_crash_rate": sum(r["n_traffic_crash"] for r in g) / n_roll if logged else None,
+                    "rollout_timeout_after_traffic_crash_rate": sum(r["n_timeout_after_traffic_crash"] for r in g) / n_roll if logged else None,
                     "mean_success_time_s": _mean(times)})
     return out
 

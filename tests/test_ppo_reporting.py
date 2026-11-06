@@ -30,7 +30,7 @@ from learning import ppo_analysis as A
 from learning.ppo_metrics import training_env_kwargs
 from learning.ppo_experiment import (
     ADMISSION_P0, EARLY_STOP_RANK, EVALUATION_RANKS, ExperimentConfig, FAMILIES, SELECTION_RANK, TEST_RANK, TRAINING_RANK,
-    VALIDATION_RANK, arena_config, create_experiment, read_json, sample_scenarios, write_json,
+    VALIDATION_RANK, arena_config, create_experiment, load_scenarios, read_json, sample_scenarios, write_json,
 )
 from learning.ppo_metrics import TrainingMetricsCallback, ValidationCallback
 from learning.report_ppo_results import build_report, markdown_to_html
@@ -213,6 +213,81 @@ def test_manifest_states_what_training_saw(tmp_path):
     exact = create_experiment(ExperimentConfig(name="e", strata=[["cutin", 1]], n_thetas=1, training_mode="exact"), tmp_path, "smoke", scenarios=[])
     assert read_json(robust / "manifest.json")["training_realization"]["env_mode"] == "distribution"
     assert read_json(exact / "manifest.json")["training_realization"]["env_mode"] == "fixed"
+
+
+def test_init_can_reuse_exact_scenarios(tmp_path):
+    rows = sample_scenarios(ExperimentConfig(name="s", strata=[["cutin", 1]], n_thetas=2))[:1]
+    (tmp_path / "rows.jsonl").write_text(json.dumps(rows[0]) + "\n")
+    (tmp_path / "cfg.json").write_text(json.dumps({"name": "reuse", "strata": [["cutin", 1]], "n_thetas": 1}))
+    subprocess.run([sys.executable, "-m", "learning.ppo_experiment", "init", "--config", str(tmp_path / "cfg.json"), "--root", str(tmp_path),
+                    "--data-class", "smoke", "--scenarios", str(tmp_path / "rows.jsonl")], check=True, capture_output=True)
+    assert load_scenarios(tmp_path / "reuse") == rows
+
+
+def _in_process_workers(monkeypatch):
+    monkeypatch.setattr("learning.feasibility_train_one.SubprocVecEnv", DummyVecEnv)
+
+
+def _short_run(tmp_path, no_early_stop):
+    params = RunParams(out=str(tmp_path / "model"), timesteps=20480, n_envs=1, no_early_stop=no_early_stop, episodes=0, ppo_seed=0,
+                       eval_freq_timesteps=2048, patience_episodes=1, patience=1, min_evals=1)
+    return train_and_evaluate("cutin", CutinConfig(mode="robust", seed=3, max_episode_seconds=2.0), params, verbose=0)
+
+
+def test_no_early_stop_keeps_the_best_checkpoint_and_trains_the_full_budget(tmp_path, monkeypatch):
+    _in_process_workers(monkeypatch)
+    meta = _short_run(tmp_path, True)
+    assert meta["timesteps_actual"] >= 20480 and meta["stop_reason"] == "reached --timesteps"
+    assert meta["evaluated_checkpoint"] == "best" and meta["best_checkpoint"] and (tmp_path / "model_best/best_model.zip").exists()
+
+
+def test_early_stopping_still_stops(tmp_path, monkeypatch):
+    _in_process_workers(monkeypatch)
+    meta = _short_run(tmp_path, False)
+    assert meta["timesteps_actual"] < 20480 and meta["stop_reason"].startswith("early stopping") and meta["evaluated_checkpoint"] == "best"
+
+
+class _CrashCar:
+    """Observer that flags one surrounding car crashed at a chosen step, as the traffic model would."""
+    def __init__(self, at_step):
+        self.at_step, self.i = at_step, 0
+
+    def start(self, env):
+        self.i = 0
+
+    def step(self, env, action, info):
+        self.i += 1
+        if self.i == self.at_step:
+            env.agents[0].crashed = True
+
+    def end(self, env, result):
+        pass
+
+
+def _rollout(observer=None):
+    env = EgoTrafficEnv(arena=CutinRuntime(CutinConfig(mode="exact", seed=3, max_episode_seconds=1.0)), mode="fixed", rollover_event="physical_v2")
+    policy = ScriptedPolicy()
+    policy.env = env
+    return run_episodes(policy, env, 1, observer=observer)[0]
+
+
+def test_rollouts_log_traffic_crashes_when_they_happen():
+    clean, crashed = _rollout(), _rollout(_CrashCar(5))
+    assert clean["traffic_crashes"] == 0 and clean["first_traffic_crash_s"] is None
+    assert crashed["traffic_crashes"] == 1 and crashed["first_traffic_crash_s"] == pytest.approx(6 * 0.05)
+
+
+def test_table_a_counts_traffic_crashes_and_keeps_older_records_unknown():
+    theta = {"road_mu": 0.5}
+    new = synthetic_record("cutin", 1, theta, 0, 4, "a")
+    for i, r in enumerate(new["rollouts"]):
+        r.update(traffic_crashes=int(i < 3), first_traffic_crash_s=6.0 if i < 3 else None, timeout=i in (0, 3))
+    row = A.scenario_row(new)
+    assert row["n_traffic_crash"] == 3 and row["n_timeout_after_traffic_crash"] == 1
+    t = A.table_a([row], [])[0]
+    assert t["rollout_traffic_crash_rate"] == 0.75 and t["rollout_timeout_after_traffic_crash_rate"] == 0.25
+    old = A.scenario_row(synthetic_record("cutin", 1, theta, 0, 4, "b"))
+    assert old["n_traffic_crash"] is None and A.table_a([old], [])[0]["rollout_traffic_crash_rate"] is None
 
 
 def test_evaluation_uses_only_the_test_stream(trained):

@@ -247,12 +247,15 @@ def main():
     p.add_argument("--config", required=True, help="JSON with ExperimentConfig fields")
     p.add_argument("--root", default=str(EXPERIMENTS_ROOT))
     p.add_argument("--data-class", choices=DATA_CLASSES, default="experiment")
+    p.add_argument("--scenarios", default=None, help="JSONL of scenario rows to reuse exactly, instead of sampling")
     p = sub.add_parser("train", help="train every (scenario, seed) not finished yet")
     p.add_argument("--experiment", required=True)
     p.add_argument("--concurrency", type=int, default=1)
     args = parser.parse_args()
     if args.command == "init":
-        exp = create_experiment(ExperimentConfig(**read_json(args.config)), Path(args.root), args.data_class)
+        scenarios = None if args.scenarios is None else read_jsonl(Path(args.scenarios))
+        assert scenarios != [], args.scenarios
+        exp = create_experiment(ExperimentConfig(**read_json(args.config)), Path(args.root), args.data_class, scenarios=scenarios)
         print(f"{exp}: {len(load_scenarios(exp))} scenarios sampled; nothing trained.")
     else:
         train_all(Path(args.experiment), args.concurrency)

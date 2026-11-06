@@ -111,7 +111,7 @@ Paralo_plus/
 │   │   minimax_store.py, minimax_pipeline.py       original exchange search (J_eval)
 │   └── constrained_core.py, constrained_adversary.py, constrained_pipeline.py   constrained search
 ├── configs/minimax/, configs/constrained/          experiment configs
-├── tests/                         pytest suite (427 tests) + 3 demo scripts
+├── tests/                         pytest suite (432 tests) + 3 demo scripts
 ├── docs/description.md, docs/how_to_run.md
 ├── requirements.txt               numpy, scipy, matplotlib, gymnasium, SB3, torch, sklearn, pytest
 └── pyproject.toml                 pytest config only (pythonpath=".")
@@ -1310,12 +1310,12 @@ With the original baseline, slippage also dominated E_risk: 0.28 of the 0.36 ris
 
 ## 17. Tests
 
-427 tests, all passing. `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` is needed where ROS is installed. `dynamics_test.py`, `road_test.py` and `traffic_test.py` are **visual demo scripts**, not pytest tests.
+432 tests, all passing. `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` is needed where ROS is installed. `dynamics_test.py`, `road_test.py` and `traffic_test.py` are **visual demo scripts**, not pytest tests.
 
 | File | Tests | Covers |
 |---|---|---|
 | `test_tire_forces.py` | 112 | Combined tire model: braking, cornering, drive, low speed, load transfer, RK4-stage friction circle, wrong-way spin sweep, event definitions, oriented footprints, env and MPC smoke tests |
-| `test_ppo_reporting.py` | 89 | Records, seed streams, exact vs. robust, Wilson and admission, seed selection, tire utilization, Frenet to world, footprints, maps, comparisons, training metrics, figures, animation, reports |
+| `test_ppo_reporting.py` | 94 | Records, seed streams, exact vs. robust, Wilson and admission, seed selection, tire utilization, Frenet to world, footprints, maps, comparisons, training metrics, figures, animation, reports |
 | `test_reward.py` | 45 | Reward decomposition, running-maximum progress, oscillation, goal cap, terminal values and priority, timeout, outcome independence, Gymnasium and PPO compatibility, γ and version stamping |
 | `test_feasibility_arena.py` | 29 | Both families: placement, triggers, prescribed events, env integration |
 | `test_minimax_feasibility.py` | 16 | Screening policies; uncertain, rejected and extrapolation cases; Wilson rule; real artifacts; seeding from the dataset |
@@ -1535,7 +1535,7 @@ A realization is `derive_seed(cfg.seed, worker_rank, episode_index)`, so worker 
 | Rank | Stream | Used for |
 |---|---|---|
 | 0 | Built-in evaluation | `train_and_evaluate` and `animate_rollout`; held out from training |
-| 1,000,000 | Early stopping | Best checkpoint and stopping |
+| 1,000,000 | Early stopping | Best checkpoint, and stopping unless `no_early_stop` is set |
 | 1,100,000 | Validation | Learning curves only |
 | 1,200,000 | Selection | Choosing one PPO seed per scenario |
 | 1,300,000 | Test | Every reported rate and every admission decision |
@@ -1551,6 +1551,8 @@ A realization is `derive_seed(cfg.seed, worker_rank, episode_index)`, so worker 
 ### 23.4 Evaluation protocol
 
 For one policy and one evaluation mode, the evaluator runs the selection stream, then the test stream with recording. When a scenario has several PPO seeds, the seed is chosen on the selection stream only. Taking the best test result across seeds would inflate p̂.
+
+**Traffic crashes are logged, not interpreted.** Each rollout records `traffic_crashes` and `first_traffic_crash_s`, and Table A reports both the crash rate and the rate of timeouts after a crash. A crash does not show the road was blocked, and those timeouts still count as failures. Older records show these as unknown, not zero.
 
 **Exact mode is one outcome.** It has no perturbation, so a deterministic policy repeats itself. It runs 3 times only to confirm that, then counts as one outcome: no Wilson interval and no admission status. If the repeats disagree, the report says so. Robust rollouts, and rollouts of a stochastic policy, are independent draws.
 

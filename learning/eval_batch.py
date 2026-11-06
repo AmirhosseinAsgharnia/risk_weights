@@ -82,11 +82,14 @@ def run_episodes(model: PPO, env: EgoTrafficEnv, episodes: int,
         terminated = truncated = False
         step_idx = 0
         ep_return = 0.0
+        first_traffic_crash_s = None
         while not (terminated or truncated):
             action, _ = model.predict(obs, deterministic=deterministic)
             obs, reward, terminated, truncated, info = env.step(action)
             ep_return += reward
             step_idx += 1
+            if first_traffic_crash_s is None and any(a.crashed for a in env.agents):
+                first_traffic_crash_s = info["elapsed_s"]
             if observer is not None:
                 observer.step(env, action, info)
 
@@ -105,6 +108,8 @@ def run_episodes(model: PPO, env: EgoTrafficEnv, episodes: int,
             "min_clearance_m": info["min_clearance_m"],
             "max_p_rollover": info["max_p_rollover"],
             "max_road_departure_m": info["max_road_departure_m"],
+            "traffic_crashes": sum(bool(a.crashed) for a in env.agents),   # surrounding cars flagged crashed at the end
+            "first_traffic_crash_s": first_traffic_crash_s,
         })
         if observer is not None:
             observer.end(env, results[-1])

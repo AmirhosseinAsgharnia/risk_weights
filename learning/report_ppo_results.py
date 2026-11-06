@@ -22,7 +22,7 @@ from learning.ppo_experiment import ADMISSION_P0, DEFINITIONS, load_scenarios, r
 
 TABLE_A_COLUMNS = ("stratum", "reward", "eval_mode", "scenarios_sampled", "scenarios_evaluated", "admitted", "uncertain", "not_admitted",
                    "mean_scenario_success_rate", "rollouts", "rollout_collision_rate", "rollout_road_departure_rate", "rollout_rollover_rate",
-                   "rollout_timeout_rate", "mean_success_time_s")
+                   "rollout_timeout_rate", "rollout_traffic_crash_rate", "rollout_timeout_after_traffic_crash_rate", "mean_success_time_s")
 
 
 def _latex_escape(value: str) -> str:
@@ -104,6 +104,8 @@ def build_report(exp: Path, html_export: bool = False) -> Path:
             "## 5. Feasibility admission summary", "",
             f"Threshold p0 = {ADMISSION_P0}, two-sided 95% Wilson interval, one selected policy per scenario, independent evaluations only: "
             f"**{counts[ADMITTED]} admitted, {counts[UNCERTAIN]} uncertain, {counts[REJECTED]} not admitted**.", "",
+            "A traffic crash means surrounding cars crashed during a rollout. It is recorded for inspection and does not show the road was blocked, "
+            "nor who or what caused it; a timeout that follows one is still counted as a failure.", "",
             "Admission says PPO demonstrated success on that scenario. Not being admitted does not show the scenario is physically "
             "impossible. No surrogate prediction appears in this report.", "",
             _figures(index, "wilson_"), "", _figures(index, "map_"), "",
