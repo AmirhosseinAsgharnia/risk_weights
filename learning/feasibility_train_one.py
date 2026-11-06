@@ -17,6 +17,8 @@ implementation of "train + evaluate one theta" for both entry points to share.
 PPO solve this precise scenario?"); "robust" mode applies each family's
 small seeded nuisance perturbations across resets (answers "can PPO solve a
 local distribution around this scenario?") -- see ArenaCommonConfig.mode.
+Training and evaluation both see those perturbations: a robust policy trains
+on a new realization every reset (see learning.ppo_metrics.training_env_kwargs).
 
 Every theta field from both families is exposed as a flag (only the ones
 belonging to --scenario-family are actually used -- see THETA_BOUNDS_CUTIN/
@@ -70,7 +72,7 @@ from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, EgoTraffi
 from learning.feasibility_cutin import CutinConfig, CutinRuntime
 from learning.feasibility_sandwich import SandwichConfig, SandwichRuntime
 from learning.eval_batch import run_episodes, summarize_seed
-from learning.ppo_metrics import TrainingMetricsCallback, VALIDATION_RANK, ValidationCallback
+from learning.ppo_metrics import TrainingMetricsCallback, VALIDATION_RANK, ValidationCallback, training_env_kwargs, training_realization
 from learning.vehicle_physics import VEHICLE_PHYSICS_VERSION
 
 CONFIG_CLASSES = {"cutin": CutinConfig, "sandwich": SandwichConfig}
@@ -195,8 +197,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
 
     def make_env(rank: int):
         def _init():
-            return EgoTrafficEnv(arena=runtime_cls(cfg), mode="fixed", worker_rank=rank,
-                                 rollover_event=params.rollover_event)
+            return EgoTrafficEnv(arena=runtime_cls(cfg), rollover_event=params.rollover_event,
+                                 **training_env_kwargs(cfg.mode, rank))
         return _init
 
     vec_env = SubprocVecEnv([make_env(i) for i in range(params.n_envs)])
@@ -205,7 +207,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
     callback = None
     stop_reason = "reached --timesteps"
     if not params.no_early_stop:
-        # worker_rank=1_000_000: far outside the training envs' own 0..n_envs-1 range, so
+        # worker_rank=1_000_000: outside the training workers' own rank range, so
         # derive_seed's SeedSequence-based stream for this held-out eval env never overlaps the
         # scenario realizations PPO is actually training on -- a real held-out set, not a relabeled
         # training episode. mode="distribution" so each periodic eval sees fresh realizations too,
@@ -269,7 +271,8 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
                                     "learning_rate": float(model.lr_schedule(1.0)), "clip_range": float(model.clip_range(1.0))},
             "ppo_seed": params.ppo_seed, "timesteps_budget": params.timesteps,
             "timesteps_actual": int(model.num_timesteps), "stop_reason": stop_reason,
-            "n_envs": params.n_envs, "evaluated_checkpoint": evaluated_checkpoint,
+            "n_envs": params.n_envs, "training_realization": training_realization(cfg.mode),
+            "evaluated_checkpoint": evaluated_checkpoint,
             "best_checkpoint": best_path if os.path.exists(best_path) else None,
             "final_checkpoint": f"{final_path}.zip"}
 
