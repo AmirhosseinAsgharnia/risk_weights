@@ -68,6 +68,7 @@ class ArenaCommonConfig:
     goal_distance_m: float = 400.0
     max_episode_seconds: float = 35.0
     min_progress_m: float = 100.0
+    max_ego_speed_mps: float | None = None   # acceleration cut off above this; braking and coasting stay free
     nominal_ego_speed_mps: float = 20.0   # experiment setting, not theta -- every actor's speed in
                                            # both families is expressed *relative* to ego's own (see
                                            # each family's THETA_BOUNDS_*), so ego's own absolute

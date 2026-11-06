@@ -290,6 +290,50 @@ def test_table_a_counts_traffic_crashes_and_keeps_older_records_unknown():
     assert old["n_traffic_crash"] is None and A.table_a([old], [])[0]["rollout_traffic_crash_rate"] is None
 
 
+def _capped_peak(limit):
+    cfg = CutinConfig(mode="exact", seed=3, max_episode_seconds=6.0, front_gap_m=100.0, max_ego_speed_mps=limit)
+    env = EgoTrafficEnv(arena=CutinRuntime(cfg), mode="fixed", rollover_event="physical_v2")
+    policy = ScriptedPolicy(accel=4.0)
+    policy.env = env
+    return run_episodes(policy, env, 1, observer=TrajectoryRecorder())[0]["physical"]["peak_speed_mps"]
+
+
+def test_speed_limit_stops_acceleration_at_the_limit():
+    assert _capped_peak(None) > 25.0
+    assert 20.9 < _capped_peak(21.0) <= 21.05
+
+
+def test_speed_limit_reaches_policy_metadata_and_evaluation(tmp_path, monkeypatch):
+    _in_process_workers(monkeypatch)
+    cfg = CutinConfig(mode="robust", seed=3, max_episode_seconds=2.0, max_ego_speed_mps=27.0)
+    meta = train_and_evaluate("cutin", cfg, RunParams(out=str(tmp_path / "model"), timesteps=64, n_envs=1, no_early_stop=True, episodes=0, ppo_seed=0), verbose=0)
+    assert meta["max_ego_speed_mps"] == 27.0
+    assert arena_config("cutin", {**meta, "theta": cfg.theta(), "scenario_seed": 3, "mode": "robust"}).max_ego_speed_mps == 27.0
+
+
+def test_success_with_sideslip_stays_a_success_and_is_reported_separately():
+    rec = synthetic_record("cutin", 1, {"road_mu": 0.5}, 3, 4, "a")
+    rec["rollouts"][0]["physical"].update(stability_loss=True, peak_abs_sideslip_deg=14.0)
+    rec["rollouts"][3]["physical"]["stability_loss"] = True   # a failure: not a success with stability loss
+    row = A.scenario_row(rec)
+    assert row["k"] == 3 and row["stability_loss_rollouts"] == 2 and row["success_with_stability_loss"] == 1 and row["peak_abs_sideslip_deg"] == 14.0
+    t = A.table_a([row], [])[0]
+    assert t["rollout_stability_loss_rate"] == 0.5 and t["success_with_stability_loss_rate"] == 0.25
+    assert row["friction_status"] == "valid" and "physical_status" not in A.table_b([row])[0]
+
+
+def test_equal_selection_goes_to_fewer_stability_losses_and_success_still_wins():
+    def rec(pid, seed, k, losses):
+        r = synthetic_record("cutin", 1, {"road_mu": 0.5}, 8, 10, pid, selection=(k, 10))
+        r["policy"]["ppo_seed"] = seed
+        r["selection"]["stability_loss"] = losses
+        r["scenario"]["training_scenario_id"] = "same"
+        return r
+    assert A.scenario_table([rec("a", 0, 9, 5), rec("b", 1, 9, 0)])[0]["ppo_seed"] == 1
+    assert A.scenario_table([rec("a", 0, 10, 5), rec("b", 1, 9, 0)])[0]["ppo_seed"] == 0
+    assert A.scenario_table([rec("a", 0, 9, 0), rec("b", 1, 9, 0)])[0]["ppo_seed"] == 0
+
+
 def test_evaluation_uses_only_the_test_stream(trained):
     r = trained["robust"]
     train_seed = derive_seed(r["scenario"]["scenario_seed"], TRAINING_RANK, 0)
@@ -436,7 +480,7 @@ def test_missing_diagnostics_are_unavailable_not_invented():
     for r in rec["rollouts"]:
         r.pop("physical")
     row = A.scenario_row(rec)
-    assert row["physical_status"] == "unavailable" and row["peak_tire_utilization"] is None
+    assert row["friction_status"] == "unavailable" and row["peak_tire_utilization"] is None
 
 
 def test_first_row_has_no_applied_control():

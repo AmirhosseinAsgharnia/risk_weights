@@ -176,7 +176,8 @@ def physical_validation(traj: Trajectory, tolerance: float = FRICTION_TOLERANCE)
            "duration_s": float(traj.ego("t")[-1]),
            "tire_saturated_steps": int(np.nansum(traj.ego("tire_saturated"))) if traj.ego("tire_saturated") is not None else None,
            "stability_loss": bool(np.nansum(traj.ego("stability_loss")) > 0) if traj.ego("stability_loss") is not None else None,
-           "peak_abs_sideslip_deg": _peak(np.degrees(np.abs(traj.ego("sideslip_rad")))) if traj.ego("sideslip_rad") is not None else None}
+           "peak_abs_sideslip_deg": _peak(np.degrees(np.abs(traj.ego("sideslip_rad")))) if traj.ego("sideslip_rad") is not None else None,
+           "peak_speed_mps": _peak(traj.ego("v_x"))}
     if util is None:
         return out
     front, rear = util["front"], util["rear"]

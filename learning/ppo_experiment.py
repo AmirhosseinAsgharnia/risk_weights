@@ -141,6 +141,7 @@ class ExperimentConfig:
     test_episodes: int = 100
     deterministic: bool = True
     trajectories_per_outcome: int = 3
+    max_ego_speed_mps: float | None = None
 
     def __post_init__(self):
         assert self.design in ("lhs", "sobol", "grid"), self.design
@@ -152,7 +153,7 @@ def arena_config(family: str, row: dict, mode: str | None = None):
     """The family config from a scenarios.jsonl row or a checkpoint's meta.json (same field names)."""
     return FAMILIES[family][0](blocker_side=row["blocker_side"], mode=mode or row["mode"], seed=row["scenario_seed"],
                                goal_distance_m=row["goal_distance_m"], max_episode_seconds=row["max_episode_seconds"],
-                               min_progress_m=row["min_progress_m"], **row["theta"])
+                               min_progress_m=row["min_progress_m"], max_ego_speed_mps=row.get("max_ego_speed_mps"), **row["theta"])
 
 
 def sample_scenarios(c: ExperimentConfig) -> list[dict]:
@@ -222,7 +223,8 @@ def _train_job(exp: str, row: dict, ppo_seed: int) -> str:
                        rollover_event=c.rollover_event, episodes=0, metrics_path=str(out / "metrics.jsonl"),
                        validation_episodes=c.validation_episodes)
     torch.set_num_threads(params.torch_threads)
-    train_and_evaluate(row["family"], arena_config(row["family"], row), params, verbose=0)
+    cfg = dataclasses.replace(arena_config(row["family"], row), max_ego_speed_mps=c.max_ego_speed_mps)
+    train_and_evaluate(row["family"], cfg, params, verbose=0)
     return str(out)
 
 

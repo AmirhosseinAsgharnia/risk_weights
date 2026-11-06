@@ -88,6 +88,7 @@ def scenario_row(rec: dict) -> dict:
             "k": k, "n": n, "p_hat": k / n if n else None, "wilson_lower": lo, "wilson_upper": hi,
             "status": admission_status(k, n, independent=independent),
             "selection_rate": rec["selection"]["k"] / rec["selection"]["n"] if rec["selection"]["n"] else None,
+            "selection_stability_loss": rec["selection"].get("stability_loss") or 0,
             "repeatable": rec.get("repeatable"), "n_rollouts": n, "n_collision": count("collision"), "n_off_road": count("off_road"),
             "n_rollover": count("rollover"), "n_timeout": sum(bool(r["timeout"]) for r in rolls),
             "n_traffic_crash": len(traffic) if logged else None,
@@ -99,18 +100,22 @@ def scenario_row(rec: dict) -> dict:
             "peak_abs_lat_accel": _peak(p.get("peak_abs_lat_accel") for p in phys), "peak_long_decel": _peak(p.get("peak_long_decel") for p in phys),
             "min_clearance_m": _low(p.get("min_clearance_m") for p in phys), "min_road_edge_clearance_m": _low(p.get("min_road_edge_clearance_m") for p in phys),
             "stability_loss_rollouts": sum(bool(p.get("stability_loss")) for p in phys),
-            "physical_status": "violation" if "violation" in statuses else ("unavailable" if "unavailable" in statuses else "valid")}
+            "success_with_stability_loss": sum(bool(r["success"]) and bool((r.get("physical") or {}).get("stability_loss")) for r in rolls),
+            "peak_abs_sideslip_deg": _peak(p.get("peak_abs_sideslip_deg") for p in phys), "peak_speed_mps": _peak(p.get("peak_speed_mps") for p in phys),
+            "friction_status": "violation" if "violation" in statuses else ("unavailable" if "unavailable" in statuses else "valid")}
 
 
 def select_policies(rows: list[dict]) -> list[dict]:
     """One row per (scenario, evaluation mode, reward). The PPO seed is chosen on the selection stream only, so
-    test rollouts are not used twice; a test-stream maximum over seeds would inflate p_hat."""
+    test rollouts are not used twice; a test-stream maximum over seeds would inflate p_hat. Equal success rates
+    go to the policy with fewer stability losses on that stream, then to the lowest seed."""
     groups = defaultdict(list)
     for r in rows:
         groups[r["training_scenario_id"], r["eval_mode"], r["reward"]].append(r)
     picked = []
     for group in groups.values():
-        best = max(group, key=lambda r: (r["selection_rate"] if r["selection_rate"] is not None else -1.0, -(r["ppo_seed"] or 0)))
+        best = max(group, key=lambda r: (r["selection_rate"] if r["selection_rate"] is not None else -1.0,
+                                       -r["selection_stability_loss"], -(r["ppo_seed"] or 0)))
         picked.append({**best, "n_seeds_considered": len(group)})
     return sorted(picked, key=lambda r: (r["stratum"], r["reward"], r["eval_mode"], r["scenario_id"]))
 
@@ -151,6 +156,8 @@ def table_a(rows: list[dict], scenarios: list[dict]) -> list[dict]:
                     "rollout_road_departure_rate": sum(r["n_off_road"] for r in g) / n_roll if n_roll else None,
                     "rollout_rollover_rate": sum(r["n_rollover"] for r in g) / n_roll if n_roll else None,
                     "rollout_timeout_rate": sum(r["n_timeout"] for r in g) / n_roll if n_roll else None,
+                    "rollout_stability_loss_rate": sum(r["stability_loss_rollouts"] for r in g) / n_roll if n_roll else None,
+                    "success_with_stability_loss_rate": sum(r["success_with_stability_loss"] for r in g) / n_roll if n_roll else None,
                     "rollout_traffic_crash_rate": sum(r["n_traffic_crash"] for r in g) / n_roll if logged else None,
                     "rollout_timeout_after_traffic_crash_rate": sum(r["n_timeout_after_traffic_crash"] for r in g) / n_roll if logged else None,
                     "mean_success_time_s": _mean(times)})
@@ -159,7 +166,8 @@ def table_a(rows: list[dict], scenarios: list[dict]) -> list[dict]:
 
 def table_b(rows: list[dict]) -> list[dict]:
     keys = ("stratum", "eval_mode", "scenario_id", "policy_id", "p_hat", "peak_tire_utilization", "friction_violations",
-            "peak_abs_lat_accel", "peak_long_decel", "min_clearance_m", "stability_loss_rollouts", "physical_status")
+            "peak_abs_lat_accel", "peak_long_decel", "peak_speed_mps", "min_clearance_m", "peak_abs_sideslip_deg", "stability_loss_rollouts",
+            "success_with_stability_loss", "friction_status")
     return [{k: r[k] for k in keys} for r in rows]
 
 

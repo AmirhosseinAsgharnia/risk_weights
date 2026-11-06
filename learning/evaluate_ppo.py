@@ -110,7 +110,7 @@ def evaluate_policy(checkpoint, exp: Path, eval_mode: str, *, test_episodes: int
     if not deterministic:
         model.set_random_seed(eval_seed)
     selection = run_episodes(model, _env(family, cfg, SELECTION_RANK, rollover_event), selection_episodes,
-                             deterministic=deterministic)
+                             deterministic=deterministic, observer=TrajectoryRecorder())
     rollouts = run_episodes(model, _env(family, cfg, TEST_RANK, rollover_event), n_test, deterministic=deterministic,
                             observer=TrajectoryRecorder(keep))
     n_distinct = len({r["fingerprint"] for r in rollouts})
@@ -125,7 +125,8 @@ def evaluate_policy(checkpoint, exp: Path, eval_mode: str, *, test_episodes: int
                          "one deterministic realization repeated to confirm it"),
         "repeatable": None if independent else n_distinct == 1,
         "summary": summarize_seed(rollouts, "distribution" if independent else "fixed", 1.0),
-        "selection": {"k": sum(bool(r["success"]) for r in selection), "n": len(selection)},
+        "selection": {"k": sum(bool(r["success"]) for r in selection), "n": len(selection),
+                      "stability_loss": sum(bool(r["physical"]["stability_loss"]) for r in selection)},
         "rollouts": rollouts}
     write_json(out, _clean(record))
     return out

@@ -18,11 +18,12 @@ from learning.ppo_analysis import (
     table_a, table_b, table_c, training_runs,
 )
 from learning.minimax_feasibility import ADMITTED, REJECTED, UNCERTAIN
+from learning.vehicle_physics import STABILITY_SIDESLIP_DEG
 from learning.ppo_experiment import ADMISSION_P0, DEFINITIONS, load_scenarios, read_json
 
 TABLE_A_COLUMNS = ("stratum", "reward", "eval_mode", "scenarios_sampled", "scenarios_evaluated", "admitted", "uncertain", "not_admitted",
                    "mean_scenario_success_rate", "rollouts", "rollout_collision_rate", "rollout_road_departure_rate", "rollout_rollover_rate",
-                   "rollout_timeout_rate", "rollout_traffic_crash_rate", "rollout_timeout_after_traffic_crash_rate", "mean_success_time_s")
+                   "rollout_timeout_rate", "rollout_stability_loss_rate", "success_with_stability_loss_rate", "rollout_traffic_crash_rate", "rollout_timeout_after_traffic_crash_rate", "mean_success_time_s")
 
 
 def _latex_escape(value: str) -> str:
@@ -85,6 +86,7 @@ def build_report(exp: Path, html_export: bool = False) -> Path:
             f"- Scenario design: `{cfg['design']}`, sampling seed {cfg['sampling_seed']}; {len(scenarios)} scenarios sampled",
             f"- PPO seeds: {cfg['ppo_seeds']}; discount {cfg['gamma']}; budget {cfg['timesteps']} steps",
             f"- Reward (current code at creation): `{manifest['reward_version']}`",
+            f"- Ego speed limit: {cfg.get('max_ego_speed_mps') or 'none'} m/s",
             f"- Software: {', '.join(f'{k} {v}' for k, v in prov['software'].items())}",
             f"- Seed streams (worker ranks): {manifest['seed_streams']}", "",
             "Terms used in this report:", ""]
@@ -104,6 +106,9 @@ def build_report(exp: Path, html_export: bool = False) -> Path:
             "## 5. Feasibility admission summary", "",
             f"Threshold p0 = {ADMISSION_P0}, two-sided 95% Wilson interval, one selected policy per scenario, independent evaluations only: "
             f"**{counts[ADMITTED]} admitted, {counts[UNCERTAIN]} uncertain, {counts[REJECTED]} not admitted**.", "",
+            f"A success with body sideslip of {STABILITY_SIDESLIP_DEG:.0f} degrees or more still counts as a success, and is reported separately: "
+            f"{sum(r['success_with_stability_loss'] > 0 for r in stat_rows if r['status'] == ADMITTED)} of {counts[ADMITTED]} admitted scenarios had at least one. "
+            "That threshold is a provisional rule of thumb.", "",
             "A traffic crash means surrounding cars crashed during a rollout. It is recorded for inspection and does not show the road was blocked, "
             "nor who or what caused it; a timeout that follows one is still counted as a failure.", "",
             "Admission says PPO demonstrated success on that scenario. Not being admitted does not show the scenario is physically "

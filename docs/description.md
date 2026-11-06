@@ -1552,6 +1552,10 @@ A realization is `derive_seed(cfg.seed, worker_rank, episode_index)`, so worker 
 
 For one policy and one evaluation mode, the evaluator runs the selection stream, then the test stream with recording. When a scenario has several PPO seeds, the seed is chosen on the selection stream only. Taking the best test result across seeds would inflate p̂.
 
+**Sideslip is reported separately from success.** A rollout with body sideslip of 10° or more still counts as a success, because feasibility and stability are distinct and 10° is provisional. Tables A and B report these rollouts separately, and Table B's `friction_status` covers friction limits only. When seeds tie on the selection stream, the one with fewer stability losses there is chosen.
+
+**Speed limit.** `max_ego_speed_mps` in `ExperimentConfig` cuts off acceleration at that speed, and braking and coasting stay free. It is stored in the policy metadata, so training and evaluation share it. It is off by default.
+
 **Traffic crashes are logged, not interpreted.** Each rollout records `traffic_crashes` and `first_traffic_crash_s`, and Table A reports both the crash rate and the rate of timeouts after a crash. A crash does not show the road was blocked, and those timeouts still count as failures. Older records show these as unknown, not zero.
 
 **Exact mode is one outcome.** It has no perturbation, so a deterministic policy repeats itself. It runs 3 times only to confirm that, then counts as one outcome: no Wilson interval and no admission status. If the repeats disagree, the report says so. Robust rollouts, and rollouts of a stochastic policy, are independent draws.

@@ -436,6 +436,9 @@ class EgoTrafficEnv(gym.Env):
         # CarState.delta already persists the last *applied* delta across steps (Car.step sets it), so
         # that alone is the correct "previous applied command" without any extra bookkeeping; there's no
         # equivalent persisted field for accel, hence self._prev_accel.
+        speed_limit = self.arena.cfg.max_ego_speed_mps if self.arena is not None else None
+        if speed_limit is not None:
+            accel_cmd = min(accel_cmd, max((speed_limit - self.ego_car.state.v_x) / DT, 0.0))
         prev_delta = self.ego_car.state.delta
         delta = clip_steering_rate(delta_cmd, prev_delta, self.max_steering_rate, DT)
         accel = clip_steering_rate(accel_cmd, self._prev_accel, self.max_jerk, DT)

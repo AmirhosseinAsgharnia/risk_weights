@@ -260,7 +260,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         model.save(params.out)
         evaluated_checkpoint = "final"
 
-    meta = {**resolved, "rollover_event_model": params.rollover_event, "reward_version": REWARD_VERSION,
+    meta = {**resolved, "max_ego_speed_mps": cfg.max_ego_speed_mps, "rollover_event_model": params.rollover_event, "reward_version": REWARD_VERSION,
             "reward_config": dataclasses.asdict(DEFAULT_REWARD_CONFIG), "ppo_gamma": params.gamma,
             "vehicle_physics_version": VEHICLE_PHYSICS_VERSION, "obs_dim": int(model.observation_space.shape[0]),
             "action_dim": int(model.action_space.shape[0]), "dt_s": DT,
