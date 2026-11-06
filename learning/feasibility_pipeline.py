@@ -93,8 +93,9 @@ def _scenario_record_from_result(family: str, blocker_side: int, cfg, meta: dict
         "mean_success_time_s": summary.get("mean_success_time_s"),
         "checkpoint": meta.get("evaluated_checkpoint"), "stop_reason": meta.get("stop_reason"),
         "timesteps_actual": meta.get("timesteps_actual"), "ppo_seed": meta.get("ppo_seed"),
-        # provenance (docs/physics_audit.md): rows without these fields predate them -- see learning.feasibility_audit
+        # provenance (docs/description.md §15): rows without these fields predate them -- see learning.feasibility_audit
         "rollover_event_model": meta.get("rollover_event_model"),
+        "reward_version": meta.get("reward_version"), "ppo_gamma": meta.get("ppo_gamma"),
         "theta_bounds_version": CURRENT_BOUNDS_VERSION[family], "git_commit": git_commit(),
     }
 
@@ -316,6 +317,7 @@ def main():
     parser.add_argument("--min-evals", type=int, default=RunParams.min_evals)
     parser.add_argument("--no-early-stop", action="store_true")
     parser.add_argument("--rollover-event", choices=["legacy_v1", "physical_v2"], default=RunParams.rollover_event)
+    parser.add_argument("--gamma", type=float, default=RunParams.gamma, help="PPO discount factor.")
 
     # fit-only
     parser.add_argument("--surrogate-out", type=str, default=None)
@@ -338,7 +340,7 @@ def main():
             eval_freq_timesteps=args.eval_freq_timesteps,
             patience_episodes=args.patience_episodes,
             patience=args.patience, min_evals=args.min_evals, no_early_stop=args.no_early_stop,
-            rollover_event=args.rollover_event,
+            rollover_event=args.rollover_event, gamma=args.gamma,
         )
         run_campaign(args.scenario_family, args.blocker_side, args.n_thetas, args.sampling_seed,
                      args.concurrency, params_template, doe_method=args.doe_method,

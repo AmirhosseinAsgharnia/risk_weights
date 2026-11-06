@@ -18,7 +18,7 @@ Usage:
         --episode-index 37 [--stochastic] [--save out.mp4]
 
 Find which episode indices actually failed (and why) for a given
-scenario_id via its rollouts.jsonl record -- see docs/feasibility_pipeline.md.
+scenario_id via its rollouts.jsonl record -- see docs/how_to_run.md.
 """
 
 import argparse

@@ -1,7 +1,7 @@
 """
 Closed-loop evaluation of an ego controller on one feasibility-arena
 scenario, and the FIXED external performance cost J_eval used by the
-minimax optimizer (see docs/minimax_design.md §3 for the definition).
+minimax optimizer (see docs/description.md §10 for the definition).
 
 Three different quantities must never be conflated:
   - PPO reward      (learning.env) -- shaping for PPO training only.

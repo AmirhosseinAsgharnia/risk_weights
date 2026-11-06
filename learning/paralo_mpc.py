@@ -1,5 +1,5 @@
 """
-PARALO-based sampling MPC (docs/constrained_design.md §3). Every
+PARALO-based sampling MPC (docs/description.md §11). Every
 `replan_every_steps` env steps it enumerates candidate ABSOLUTE input pairs
 (a, delta), holds each over the whole horizon (subject to the env's own
 jerk and steering-rate limits, modelled as ramps), predicts the ego and the
@@ -28,7 +28,7 @@ Prediction:
         K_us = m/L (l_r/C_f - l_f/C_r) is the vehicle's understeer gradient. With
         K_us = 0 this is the plain kinematic bicycle; the simulated SUV understeers
         so strongly (K_us ~ 0.034 rad s^2/m) that the plain kinematic model
-        over-predicts yaw rate ~6x at 20 m/s (docs/constrained_design.md §2.3), so the
+        over-predicts yaw rate ~6x at 20 m/s (docs/description.md §11.3), so the
         corrected form is the default (`understeer_gradient=None` -> computed).
   surr  constant velocity (longitudinal v_x, lateral v_x sin e_psi + v_y cos e_psi),
         backbone frame -- the same model learning.risk_eval used.
@@ -37,7 +37,7 @@ PARALO risk inputs (learning.vehicle_physics, the single conversion point): roll
 slippage are kinematic-radius models, so by default they are given delta_eq =
 atan(L r_pred / v) of the candidate's own PREDICTED yaw rate ("kinematic_equivalent")
 -- never the held delta, which also contains the understeer angle K a_y and made both
-read ~1 at 2 m/s^2 real lateral acceleration (docs/physics_audit.md §A2), and never
+read ~1 at 2 m/s^2 real lateral acceleration (docs/description.md §A2), and never
 simulator ground truth. "applied" reproduces the paralo-mpc-v1 behaviour.
 Road friction: the simulator uses the scenario's road_mu; the MPC is given mu_hat from
 a FrictionInfoConfig (oracle by default: mu_hat = road_mu, the perfect-information
@@ -128,7 +128,7 @@ class ParaloMPCConfig:
     c_jerk: float = 0.1
     c_latacc: float = 1.0
     c_road: float = 20.0
-    # normalizers (docs/proposal_paralo_mpc.md §2.1)
+    # normalizers (docs/description.md §11.2)
     accel_ref_mps2: float = 4.0
     steer_ref_rad: float = DELTA_MAX
     jerk_ref_mps3: float = 10.0

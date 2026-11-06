@@ -91,8 +91,9 @@ def test_episode_is_deterministic_and_w_changes_behaviour():
 def test_outcome_and_cost_independent_of_ppo_reward(monkeypatch):
     w0 = MPCWeights().to_vector()
     base = run_episode(build_controller({"name": "mpc"}, w0), SPEC, 3, COST)
-    for name in ("PROGRESS_REWARD_SCALE", "COLLISION_PENALTY", "FINISH_BONUS", "SURVIVAL_REWARD", "LANE_TRACKING_SCALE"):
-        monkeypatch.setattr(env_mod, name, getattr(env_mod, name) * 13.0 + 1.0)
+    changed = {f.name: getattr(env_mod.DEFAULT_REWARD_CONFIG, f.name) * 13.0 + 1.0
+               for f in dataclasses.fields(env_mod.RewardConfig)}
+    monkeypatch.setattr(env_mod, "DEFAULT_REWARD_CONFIG", env_mod.RewardConfig(**changed))
     assert run_episode(build_controller({"name": "mpc"}, w0), SPEC, 3, COST) == base
     assert base["success"] == (base["outcome"] == "finished")
 

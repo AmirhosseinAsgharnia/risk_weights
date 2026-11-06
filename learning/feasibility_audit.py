@@ -1,6 +1,6 @@
 """
 PPO feasibility-dataset audit, relabelling, curation and surrogate validation
-(docs/physics_audit.md §A3, Part B). The original scenarios.jsonl /
+(docs/description.md §A3, Part B). The original scenarios.jsonl /
 rollouts.jsonl are NEVER modified: the audit and the relabels are separate,
 versioned files next to them, and curation only decides what a surrogate
 fit may use.
@@ -58,7 +58,7 @@ from learning.minimax_feasibility import demonstrated
 AUDIT_VERSION = "dataset-audit-v1"
 RELABEL_EVENT_MODEL = "physical_v2"
 
-# Every bound version ever used, oldest first (git history; docs/physics_audit.md §A3).
+# Every bound version ever used, oldest first (git history; docs/description.md §A3).
 BOUNDS_HISTORY = {
     "cutin": {
         "cutin-bounds-v0": {**THETA_BOUNDS_CUTIN, "cutter_relative_speed_mps": (-12.0, 5.0), "front_gap_m": (8.0, 60.0)},

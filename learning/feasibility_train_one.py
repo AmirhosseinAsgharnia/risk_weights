@@ -64,12 +64,14 @@ import os
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoModelImprovement
+from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnNoModelImprovement
 
-from learning.env import EgoTrafficEnv
+from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, EgoTrafficEnv, REWARD_VERSION
 from learning.feasibility_cutin import CutinConfig, CutinRuntime
 from learning.feasibility_sandwich import SandwichConfig, SandwichRuntime
 from learning.eval_batch import run_episodes, summarize_seed
+from learning.ppo_metrics import TrainingMetricsCallback, VALIDATION_RANK, ValidationCallback
+from learning.vehicle_physics import VEHICLE_PHYSICS_VERSION
 
 CONFIG_CLASSES = {"cutin": CutinConfig, "sandwich": SandwichConfig}
 RUNTIME_CLASSES = {"cutin": CutinRuntime, "sandwich": SandwichRuntime}
@@ -97,6 +99,7 @@ class RunParams:
     timesteps: int = 2_000_000
     n_envs: int = max(1, (os.cpu_count() or 4) - 1)
     ppo_seed: int | None = None
+    gamma: float = DEFAULT_PPO_GAMMA   # PPO discount factor -- see that constant's own comment
     device: str = "cpu"   # deliberately not SB3's usual "auto": a small MlpPolicy over this plain
                           # NumPy/Python physics env is CPU-bound end to end (see SB3's own runtime
                           # warning when this is overridden to "cuda"/"auto" on a GPU machine) --
@@ -114,7 +117,10 @@ class RunParams:
     rollover_event: str = "physical_v2"   # EgoTrafficEnv's ROLLOVER detector for training AND evaluation
                                           # (learning.vehicle_physics). Rows written before this field existed
                                           # used "legacy_v1" (P_roll(v, delta_cmd) > 0.5 -- known false
-                                          # positives; docs/physics_audit.md). Stamped into meta.json.
+                                          # positives; docs/description.md §15). Stamped into meta.json.
+    metrics_path: str | None = None   # JSONL of training and validation scalars (learning.ppo_metrics). None
+                                      # logs nothing, so the pipeline's existing behaviour is unchanged.
+    validation_episodes: int = 20     # fixed validation realizations per learning-curve point
     return_rollout_details: bool = False   # see train_and_evaluate's own docstring -- opt-in,
                                             # keeps this file's CLI/meta.json output unchanged by default
     torch_threads: int = 1   # PyTorch defaults to spinning up threads across every available core for
@@ -194,7 +200,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         return _init
 
     vec_env = SubprocVecEnv([make_env(i) for i in range(params.n_envs)])
-    model = PPO("MlpPolicy", vec_env, verbose=verbose, device=params.device, seed=params.ppo_seed)
+    model = PPO("MlpPolicy", vec_env, verbose=verbose, device=params.device, seed=params.ppo_seed, gamma=params.gamma)
 
     callback = None
     stop_reason = "reached --timesteps"
@@ -214,7 +220,17 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
             eval_freq=max(1, params.eval_freq_timesteps // params.n_envs),
             n_eval_episodes=params.patience_episodes, deterministic=True, verbose=verbose)
 
-    model.learn(total_timesteps=params.timesteps, callback=callback)
+    callbacks = [callback] if callback is not None else []
+    if params.metrics_path is not None:
+        def make_validation_env():
+            return EgoTrafficEnv(arena=runtime_cls(cfg), mode="distribution", worker_rank=VALIDATION_RANK,
+                                 rollover_event=params.rollover_event)
+        # exact mode has one realization, so a deterministic policy would repeat it: one episode says it all
+        episodes = 1 if cfg.mode == "exact" else params.validation_episodes
+        callbacks += [TrainingMetricsCallback(params.metrics_path),
+                      ValidationCallback(make_validation_env, params.metrics_path, params.eval_freq_timesteps, episodes)]
+
+    model.learn(total_timesteps=params.timesteps, callback=CallbackList(callbacks) if callbacks else None)
     if callback is not None and model.num_timesteps < params.timesteps:
         stop_reason = (f"early stopping: no improvement over {params.patience} held-out evaluations "
                         f"(each {params.patience_episodes} episodes) after {params.min_evals} minimum evals")
@@ -243,7 +259,15 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         model.save(params.out)
         evaluated_checkpoint = "final"
 
-    meta = {**resolved, "rollover_event_model": params.rollover_event, "ppo_seed": params.ppo_seed, "timesteps_budget": params.timesteps,
+    meta = {**resolved, "rollover_event_model": params.rollover_event, "reward_version": REWARD_VERSION,
+            "reward_config": dataclasses.asdict(DEFAULT_REWARD_CONFIG), "ppo_gamma": params.gamma,
+            "vehicle_physics_version": VEHICLE_PHYSICS_VERSION, "obs_dim": int(model.observation_space.shape[0]),
+            "action_dim": int(model.action_space.shape[0]), "dt_s": DT,
+            "ppo_hyperparameters": {"gamma": model.gamma, "gae_lambda": model.gae_lambda, "n_steps": model.n_steps,
+                                    "batch_size": model.batch_size, "n_epochs": model.n_epochs, "ent_coef": model.ent_coef,
+                                    "vf_coef": model.vf_coef, "max_grad_norm": model.max_grad_norm,
+                                    "learning_rate": float(model.lr_schedule(1.0)), "clip_range": float(model.clip_range(1.0))},
+            "ppo_seed": params.ppo_seed, "timesteps_budget": params.timesteps,
             "timesteps_actual": int(model.num_timesteps), "stop_reason": stop_reason,
             "n_envs": params.n_envs, "evaluated_checkpoint": evaluated_checkpoint,
             "best_checkpoint": best_path if os.path.exists(best_path) else None,
@@ -293,6 +317,7 @@ def main():
                               "--no-early-stop) will typically stop well before this.")
     parser.add_argument("--n-envs", type=int, default=RunParams.n_envs)
     parser.add_argument("--ppo-seed", type=int, default=None, help="PPO's own algorithm-level seed.")
+    parser.add_argument("--gamma", type=float, default=RunParams.gamma, help="PPO discount factor.")
     parser.add_argument("--device", type=str, default=RunParams.device)
     parser.add_argument("--torch-threads", type=int, default=RunParams.torch_threads,
                          help="PyTorch's own CPU thread count for this process -- see RunParams."
@@ -332,7 +357,7 @@ def main():
 
     cfg = _build_config(args)
     params = RunParams(
-        out=args.out, timesteps=args.timesteps, n_envs=args.n_envs, ppo_seed=args.ppo_seed,
+        out=args.out, timesteps=args.timesteps, n_envs=args.n_envs, ppo_seed=args.ppo_seed, gamma=args.gamma,
         device=args.device, torch_threads=args.torch_threads, force=args.force,
         no_early_stop=args.no_early_stop,
         eval_freq_timesteps=args.eval_freq_timesteps, patience_episodes=args.patience_episodes,

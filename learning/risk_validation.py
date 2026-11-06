@@ -1,6 +1,6 @@
 """
 PARALO risk-model validation against the simulator's physical events
-(docs/physics_audit.md Part B, spec §9). Nothing is recalibrated here.
+(docs/description.md §15, spec §9). Nothing is recalibrated here.
 
 Part 1, steady state (real CarDynamics, straight road, constant delta held 8 s):
     grid over speed x commanded steering x friction, plus braking demand at

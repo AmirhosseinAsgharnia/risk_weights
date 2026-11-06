@@ -43,6 +43,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from learning.env import (
+    DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, REWARD_VERSION,
     EgoTrafficEnv, N_SURR, LANE_NUM, DT, EPISODE_SECONDS, MAX_STEPS, MAX_STEERING_RATE, MAX_JERK,
 )
 from learning.scenario import ScenarioConfig
@@ -61,6 +62,8 @@ def _build_meta(args, scenario_config: ScenarioConfig | None) -> dict:
         "ppo_seed": args.ppo_seed,
         "base_seed": args.base_seed,
         "args": vars(args),
+        "reward_version": REWARD_VERSION,
+        "reward_config": dataclasses.asdict(DEFAULT_REWARD_CONFIG),
         "env_constants": {
             "N_SURR": N_SURR, "LANE_NUM": LANE_NUM, "DT": DT,
             "EPISODE_SECONDS": EPISODE_SECONDS, "MAX_STEPS": MAX_STEPS,
@@ -104,6 +107,8 @@ def main():
                                 "experiment (different scenario_config/scenario_mode).")
     parser.add_argument("--n-epochs", type = int, default = 30,
                          help = "PPO gradient-descent passes over each collected rollout (SB3 default is 10).")
+    parser.add_argument("--gamma", type = float, default = DEFAULT_PPO_GAMMA,
+                         help = "PPO discount factor -- see learning.env.DEFAULT_PPO_GAMMA.")
     parser.add_argument("--device", type = str, default = "auto",
                          help = "'auto' (default, picks cuda if available), 'cuda', 'cuda:0', or 'cpu'. "
                                 "Note: the environment itself always runs on CPU (it's plain Python/NumPy "
@@ -157,7 +162,7 @@ def main():
 
     vec_env = SubprocVecEnv([_make_env(i) for i in range(args.n_envs)])
     model = PPO("MlpPolicy", vec_env, verbose = 1, device = args.device,
-                n_epochs = args.n_epochs, seed = args.ppo_seed)
+                n_epochs = args.n_epochs, seed = args.ppo_seed, gamma = args.gamma)
     model.learn(total_timesteps = args.timesteps)
     model.save(args.out)
 

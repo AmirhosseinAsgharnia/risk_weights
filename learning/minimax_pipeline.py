@@ -3,7 +3,7 @@ Surrogate-assisted minimax tuning of ONE shared MPC parameter vector w:
 
     w* = argmin_{w in W} max_{(f, b, theta) admitted} J_eval(w, theta)
 
-See docs/minimax_design.md for the definitions of w, J_eval and the
+See docs/description.md §10 for the definitions of w, J_eval and the
 admissible set, and learning.minimax_core for the exchange algorithm.
 
 Modes:

@@ -1,6 +1,6 @@
 """
 PROPOSED ego MPC (a research default, not an established requirement --
-see docs/minimax_design.md §2): a sampling-based MPC that, every
+see docs/description.md §10): a sampling-based MPC that, every
 `replan_every_steps` env steps, enumerates a finite set of candidate plans
 (constant longitudinal acceleration a_c x target lane l_c), predicts each
 over a short horizon with a simplified model, scores it with the weighted

@@ -1,6 +1,6 @@
 """
 Physical closed-loop outcome evaluation for the constrained minimax
-(docs/constrained_design.md §4). No weights anywhere: an episode is reduced
+(docs/description.md §12). No weights anywhere: an episode is reduced
 to physical quantities, and scenarios to rates / peaks over realization
 seeds.
 
@@ -23,11 +23,15 @@ Per episode (actual simulator states and APPLIED controls, never predictions):
       separate indicators, always recorded whichever model terminates the episode:
         rollover_legacy_indicator    P_roll(v_x, delta_cmd) > 0.5 at some step
         rollover_physical_indicator  |a_y| >= SSF g at some step
-        slip_lateral_saturation      some axle's requested C alpha >= mu F_z (tire-force saturation)
-        slip_friction_circle         vehicle-level combined demand >= 1 (the simulator itself does NOT limit
-                                     a_x by friction -- this flags e.g. 8 m/s^2 braking on mu = 0.4)
-    peaks: max |applied accel|, max |realized lateral accel| ((F_yf + F_yr)/m), max |applied jerk|;
-           diagnostics: max |a_y|/(SSF g), max friction demand, max |sideslip| [deg].
+        slip_lateral_saturation      some axle's requested C alpha exceeds the F_y,max left after its F_x
+        slip_friction_circle         some axle's REQUESTED combined force >= mu F_z, e.g. 8 m/s^2 braking on
+                                     mu = 0.4; the dynamics only ever see the saturated forces
+        stability_loss               |body sideslip| >= STABILITY_SIDESLIP_DEG while moving. Recorded, not part
+                                     of `slippage`: a tire at its limit is not an unrecoverable skid
+    peaks: max |realized a_x|, max |realized a_y| (body accelerations from tire forces), max |applied jerk|;
+           diagnostics: max |a_y|/(SSF g), max friction demand (requested), max tire utilization (realized),
+           max |sideslip| and |slip angle| [deg], max |actuator-limited accel command|, and vehicle total
+           requested vs realized F_x and F_y [N].
 
 Per scenario (over the realization seeds, common random numbers across w):
     J_progress = mean shortfall;  event rate k/n with its Wilson 95% interval;
@@ -49,30 +53,38 @@ import numpy as np
 from initialization.traffic_init import CAR_WIDTH
 from learning.vehicle_physics import (
     friction_demand, p_roll_legacy, rollover_accel_threshold, slip_friction_circle, slip_lateral_saturation,
-    ROLLOVER_EVENT_MODELS, LEGACY_ROLLOVER_PROB_THRESHOLD,
+    stability_loss, tire_utilization, ROLLOVER_EVENT_MODELS, LEGACY_ROLLOVER_PROB_THRESHOLD,
 )
 from learning.closed_loop import FAMILIES, ScenarioSpec, build_controller
 from learning.ego_control import EgoView, to_env_action
 from learning.env import EgoTrafficEnv, DT, FailureReason
 from learning.eval_batch import wilson_ci
 
-PHYSICAL_EVALUATOR_VERSION = "physical-v2"   # bump on any change to an episode record's definitions
+PHYSICAL_EVALUATOR_VERSION = "physical-v3"   # bump on any change to an episode record's definitions
 # physical-v1: rollover = legacy P_roll(v, delta_cmd) event only; slippage = lateral saturation only;
 #              lateral accel peak by finite differences of v_y.
+# physical-v2: tire forces only limited laterally, friction demand per vehicle, peak_abs_accel = the command.
 
 EVENTS = ("collision", "rollover", "road_departure", "slippage", "lane_departure",
-          "rollover_legacy_indicator", "rollover_physical_indicator", "slip_lateral_saturation", "slip_friction_circle")
+          "rollover_legacy_indicator", "rollover_physical_indicator", "slip_lateral_saturation", "slip_friction_circle",
+          "stability_loss")
 _STEP_EVENTS = ("lane_departure", "rollover_legacy_indicator", "rollover_physical_indicator",
-                "slip_lateral_saturation", "slip_friction_circle")
+                "slip_lateral_saturation", "slip_friction_circle", "stability_loss")
 PEAKS = ("peak_abs_accel", "peak_abs_lat_accel", "peak_abs_jerk")
-DIAG_PEAKS = ("peak_ay_over_rollover_threshold", "peak_friction_demand", "peak_abs_sideslip_deg")
+DIAG_PEAKS = ("peak_ay_over_rollover_threshold", "peak_friction_demand", "peak_abs_sideslip_deg",
+              "peak_tire_utilization", "peak_abs_slip_angle_deg", "peak_abs_accel_cmd",
+              "peak_abs_Fx_req", "peak_abs_Fx", "peak_abs_Fy_req", "peak_abs_Fy")
 METRICS = {**{f"{e}_rate": ("event", e, "1/episode") for e in EVENTS},
            "peak_abs_accel": ("peak", "peak_abs_accel", "m/s^2"),
            "peak_abs_lat_accel": ("peak", "peak_abs_lat_accel", "m/s^2"),
            "peak_abs_jerk": ("peak", "peak_abs_jerk", "m/s^3"),
            "peak_ay_over_rollover_threshold": ("peak", "peak_ay_over_rollover_threshold", "1"),
            "peak_friction_demand": ("peak", "peak_friction_demand", "1"),
-           "peak_abs_sideslip_deg": ("peak", "peak_abs_sideslip_deg", "deg")}
+           "peak_abs_sideslip_deg": ("peak", "peak_abs_sideslip_deg", "deg"),
+           "peak_tire_utilization": ("peak", "peak_tire_utilization", "1"),
+           "peak_abs_slip_angle_deg": ("peak", "peak_abs_slip_angle_deg", "deg"),
+           "peak_abs_accel_cmd": ("peak", "peak_abs_accel_cmd", "m/s^2"),
+           **{p: ("peak", p, "N") for p in ("peak_abs_Fx_req", "peak_abs_Fx", "peak_abs_Fy_req", "peak_abs_Fy")}}
 
 
 def run_physical_episode(controller, scenario: ScenarioSpec, realization_seed: int,
@@ -101,7 +113,12 @@ def run_physical_episode(controller, scenario: ScenarioSpec, realization_seed: i
         a = env._prev_accel
         ts = env.ego_tire_state()
         fd = friction_demand(ts, vp)
-        peaks["peak_abs_accel"] = max(peaks["peak_abs_accel"], float(abs(a)))
+        for key, value in (("peak_abs_accel", ts.a_x), ("peak_abs_accel_cmd", a),
+                           ("peak_abs_Fx_req", ts.F_xf_req + ts.F_xr_req), ("peak_abs_Fx", ts.F_xf + ts.F_xr),
+                           ("peak_abs_Fy_req", ts.F_yf_req + ts.F_yr_req), ("peak_abs_Fy", ts.F_yf + ts.F_yr),
+                           ("peak_abs_slip_angle_deg", np.degrees(max(abs(ts.alpha_f), abs(ts.alpha_r))))):
+            peaks[key] = max(peaks[key], float(abs(value)))
+        peaks["peak_tire_utilization"] = max(peaks["peak_tire_utilization"], tire_utilization(ts))
         peaks["peak_abs_jerk"] = max(peaks["peak_abs_jerk"], float(abs(a - prev_a) / DT))
         peaks["peak_abs_lat_accel"] = max(peaks["peak_abs_lat_accel"], abs(ts.a_y))
         peaks["peak_ay_over_rollover_threshold"] = max(peaks["peak_ay_over_rollover_threshold"], abs(ts.a_y) / ay_roll)
@@ -113,6 +130,7 @@ def run_physical_episode(controller, scenario: ScenarioSpec, realization_seed: i
         ev_steps["rollover_physical_indicator"] += int(abs(ts.a_y) >= ay_roll)
         ev_steps["slip_lateral_saturation"] += int(slip_lateral_saturation(ts))
         ev_steps["slip_friction_circle"] += int(fd >= 1.0)
+        ev_steps["stability_loss"] += int(stability_loss(ts))
         n += 1
 
     fr = info["failure_reason"]

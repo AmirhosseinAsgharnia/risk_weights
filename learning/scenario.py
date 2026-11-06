@@ -132,14 +132,10 @@ class ScenarioConfig:
                                       # completion as before.
     max_episode_seconds: float = 20.0   # [s] wall-clock episode budget for this scenario -- overrides
                                          # learning.env.EPISODE_SECONDS when this ScenarioConfig is used.
-    min_progress_m: float = 50.0   # [m] a timeout (reaching max_episode_seconds unharmed without
-                                    # reaching goal_distance_m) only earns EgoTrafficEnv's SURVIVAL_REWARD
-                                    # if net forward progress was at least this much -- otherwise idling
-                                    # or crawling for the full episode earns nothing, so "stop and never
-                                    # risk it" can't out-earn a genuine (if unsuccessful) attempt. Purely a
-                                    # training-reward knob -- never affects `success` itself (see
-                                    # EgoTrafficEnv.step's outcome/success separation). ASSUMPTION, not
-                                    # derived from a spec.
+    min_progress_m: float = 50.0   # [m] below this net forward progress, a timeout is reported as
+                                    # info["lack_of_progress"], which tells an idling episode from a genuine
+                                    # attempt. Diagnostic only: it affects neither `success` nor the reward.
+                                    # ASSUMPTION, not derived from a spec.
 
     # -- critical actors --
     front: CriticalActorConfig = field(

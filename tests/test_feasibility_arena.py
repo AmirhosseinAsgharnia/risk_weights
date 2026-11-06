@@ -322,13 +322,19 @@ def test_cutin_no_lateral_teleport():
 
 # ── Sandwich specific ────────────────────────────────────────────────────
 
+def _hold_back_action():
+    # Ego brakes gently so it stays behind the stopper: reaching it would end the episode in the last
+    # instants of the stop, which is what these tests want to see.
+    return np.array([0.0, 0.0], dtype=np.float32)
+
+
 def test_sandwich_front_decelerates_monotonically_to_zero_and_holds():
     cfg = SandwichConfig(seed=0, mode="exact", s_stop_m=110.0, front_relative_speed_mps=0.0)
     env = EgoTrafficEnv(arena=SandwichRuntime(cfg), mode="fixed")
     obs, _ = env.reset()
     speeds = []
     for _ in range(300):
-        obs, reward, term, trunc, info = env.step(_cruise_action())
+        obs, reward, term, trunc, info = env.step(_hold_back_action())
         stopper = next(a for a in env.agents if a.car.car_id == 0)
         speeds.append(stopper.car.state.v_x)
         if info["arena"]["front_stopped"] and len(speeds) > 5:
@@ -344,10 +350,8 @@ def test_sandwich_front_decelerates_monotonically_to_zero_and_holds():
         if v <= 1e-6:
             break
     assert all(a >= b - 1e-9 for a, b in zip(decreasing_part, decreasing_part[1:]))
-    # Not exactly 0.0: the clamped-accel formula (see SandwichRuntime.pre_surr_step) is exact for
-    # the isolated dv_x/dt=accel ODE, but RK4 still integrates the full 6-state CarDynamics model,
-    # whose tiny (numerical-noise-level) r*v_y coupling leaves a negligible residual -- physically
-    # stopped (<1mm/s) well within one step, not a real drift.
+    # Not exactly 0.0: the held brake's force fades out with speed near rest (model.car.model.tire_forces),
+    # so v_x decays to 0 instead of landing on it -- physically stopped, never reversing.
     assert speeds[-1] == pytest.approx(0.0, abs=1e-2)
 
 
@@ -357,7 +361,7 @@ def test_sandwich_idm_never_resumes_after_stop():
     obs, _ = env.reset()
     stopped_seen = False
     for _ in range(400):
-        obs, reward, term, trunc, info = env.step(_cruise_action())
+        obs, reward, term, trunc, info = env.step(_hold_back_action())
         if info["arena"]["front_stopped"]:
             stopped_seen = True
             stopper = next(a for a in env.agents if a.car.car_id == 0)

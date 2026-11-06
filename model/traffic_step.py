@@ -202,6 +202,9 @@ def step_surr_agents(
             delta_cmd += far_near_curvature_feedforward(kappa_preview, car.vehicle_params.L)
 
             delta = clip_steering_rate(delta_cmd, agent.prev_delta, fn_p.steer_rate_limit, dt)
+            # Steering lock: far-near keeps asking for more while a car stands still, and the angle
+            # would otherwise wind up past a full turn before a queued car moves off.
+            delta = max(min(delta, car.vehicle_params.delta_max), -car.vehicle_params.delta_max)
             agent.prev_delta = delta
 
             # 4. Road curvature/friction at this car's current position, using

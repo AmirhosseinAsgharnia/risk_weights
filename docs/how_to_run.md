@@ -1,17 +1,14 @@
 # How to run: from a fresh checkout to a tuned MPC
 
-This guide lists the steps in order. Each step says what it does, the command to run, and what to check before moving on. For *why* things work this way, see:
+This guide lists the steps in order. Each step says what it does, the command to run, and what to check before moving on. For *why* things work this way, see [description.md](description.md).
 
-- [feasibility_pipeline.md](feasibility_pipeline.md) — the PPO feasibility data and surrogate (steps 3–5)
-- [minimax_design.md](minimax_design.md) — the MPC, `w`, `J_eval`, and the minimax algorithm (steps 6–10)
-- [developer_manual.md](developer_manual.md) — how the whole repository fits together
-
-Run every command from the repository root. All commands fit on one line.
+Run every command from the repository root. All commands fit on one line. Long runs belong on abl-drivsim-iii: edit and commit locally, then pull and run there.
 
 There are two tuning pipelines. Both share steps 0 and 3–5 (setup, PPO data, surrogates):
 
 - **Part A** (steps 1–2 and 6–10): the original MPC, scored by one weighted cost J_eval. It is kept as the baseline.
-- **[Part B](#part-b--constrained-minimax-paralo-mpc)**: the PARALO MPC, tuned for worst-case progress subject to physical safety and comfort constraints, with no evaluation weights. Its design is in [constrained_design.md](constrained_design.md).
+- **[Part B](#part-b--constrained-minimax-paralo-mpc)**: the PARALO MPC, tuned for worst-case progress subject to physical safety and comfort constraints, with no evaluation weights. Its design is in [description.md §13](description.md).
+- **[Part C](#part-c--single-scenarios-and-inspection)**: train one scenario, evaluate or watch a policy, and draw heatmaps.
 
 ```
  0. Setup               install, run the tests
@@ -104,13 +101,25 @@ The numbers mean nothing because the budget is tiny. Before running the smoke te
 
 The surrogate learns *P(PPO can solve θ)* from PPO training results. This is the expensive step, so run it on the big machine (32 cores). Repeat 3a–3b for every stratum you plan to optimize over. The commands below are for `cutin +1`.
 
-**3a. Benchmark concurrency** (this does not write to the real dataset):
+**3a. Benchmark concurrency.** Run this on new hardware. It recommends a `--concurrency` and does not write to the real dataset:
 
 ```bash
 python -m learning.feasibility_pipeline --mode pilot --scenario-family cutin --blocker-side 1 --pilot-concurrencies 1,2,4,8,16 --pilot-envs-per-job 4
 ```
 
-**3b. Sample θ and train PPO on each one** (resumable; re-running the same command skips scenarios that are already finished):
+Measured on `abl-drivsim-iii` (32 cores, RTX 5070) with `--pilot-envs-per-job 4`:
+
+| Concurrency | Scenarios/hour | Env workers |
+|---:|---:|---:|
+| 1 | 268.6 | 4 |
+| 2 | 413.0 | 8 |
+| 4 | 632.5 | 16 |
+| 8 | 932.3 | 32 (physical core count) |
+| 16 | 1079.7 | 64 (2× oversubscribed) |
+
+`pilot` picks the highest number, but that comes from a 53-second burst. Concurrency 8 is the safer choice for a long run, because it sits at the physical core count and captures most of the gain.
+
+**3b. Sample θ and train PPO on each one** (resumable; re-running the same command skips scenarios that are already finished, and picks up finished-but-unrecorded results without retraining):
 
 ```bash
 python -m learning.feasibility_pipeline --mode run --scenario-family cutin --blocker-side 1 --n-thetas 100 --sampling-seed 1 --concurrency 8 --n-envs 4 --timesteps 2000000 --episodes 100
@@ -120,9 +129,12 @@ Things to know:
 
 - `--n-thetas` **adds** that many new scenarios. It is not a target total. Use a **new `--sampling-seed`** for each extra batch.
 - With fewer than 50 scenarios, the surrogate is marked `PRELIMINARY`. With so few, a conservative screen leaves most candidates `UNCERTAIN`. Aim for at least 100 per stratum.
-- **There is no PPO data at the moment.** The old `cutin +1` dataset was deleted on 2026-10-28; its labels came from the legacy rollover detector (see [physics_audit.md](physics_audit.md)). Every stratum starts from scratch.
+- **There is no PPO data at the moment.** The old `cutin +1` dataset was deleted on 2026-10-28; its labels came from the legacy rollover detector (see [description.md §15](description.md)). Every stratum starts from scratch.
 - New runs train and evaluate with the corrected rollover event (`--rollover-event physical_v2`, the default). Every dataset row records its `rollover_event_model`, `theta_bounds_version` and `git_commit`. Never append `legacy_v1` rows to a `physical_v2` dataset.
 - Results are written to `artifacts/feasibility/datasets/<family>/side_pos1|side_neg1/`.
+- Run both blocker sides separately. They get independent designs, datasets and surrogates.
+- If you change `THETA_BOUNDS_CUTIN` or `THETA_BOUNDS_SANDWICH`, also bump the bounds version and treat the old data as a separate experiment. Rows are stamped, so the audit excludes old out-of-bounds rows, but archiving keeps the dataset honest.
+- **Back up the policies after a campaign.** They are not in git, so they exist only on that machine.
 
 For the other strata, change `--scenario-family` and `--blocker-side`, for example `--scenario-family sandwich --blocker-side -1`.
 
@@ -166,11 +178,22 @@ The file name must match the `surrogate` path in your minimax config. The shippe
 Draw heatmaps of the regions that are feasible and infeasible for PPO. The first command uses only the data. The second also draws the surrogate's prediction:
 
 ```bash
-python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 --out-dir artifacts/feasibility/plots/cutin_side1
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 --out-dir artifacts/feasibility/heatmaps/cutin_side1
 ```
 ```bash
-python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 --surrogate artifacts/feasibility/surrogates/cutin_side1.joblib --out-dir artifacts/feasibility/plots/cutin_side1
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 --surrogate artifacts/feasibility/surrogates/cutin_side1.joblib --out-dir artifacts/feasibility/heatmaps/cutin_side1
 ```
+
+To restrict the plots to some θ dimensions instead of every pair:
+
+```bash
+python -m learning.feasibility_interpret --scenario-family cutin --blocker-side 1 --dims front_gap_m,cutter_relative_speed_mps,s_cutin_m --out-dir artifacts/feasibility/heatmaps/cutin_side1
+```
+
+It writes one PNG per pair of θ dimensions (28 for cut-in, 45 for sandwich).
+
+- **Empirical panel** (always): every sampled scenario's success rate, projected onto that pair and interpolated inside the convex hull of the samples. It is a marginal projection, not a controlled slice. Gray means no data.
+- **Surrogate panel** (with `--surrogate`): p̂ on a grid, with the other dimensions held at the dataset median. This one is a controlled slice.
 
 This lets you judge the surrogate before trusting it to screen scenarios.
 
@@ -297,7 +320,10 @@ python -m learning.minimax_pipeline --mode report --compare artifacts/minimax/ex
 ```
 artifacts/feasibility/
   datasets/<family>/side_pos1|side_neg1/   scenarios.jsonl, rollouts.jsonl       (step 3)
+  policies/<family>/<side>/<scenario_id>/ model.zip, model_final.zip, model.meta.json
+  evaluations/<family>/<side>/<scenario_id>.result.json                          (worker output)
   surrogates/<family>_side<±1>.joblib                                            (step 4)
+  heatmaps/<family>_side<±1>/                                                    (step 5)
 artifacts/minimax/experiments/<experiment_id>/
   config.json, manifest.json             what was run, git commit, surrogate hashes
   iterations.jsonl                       one row per exchange iteration
@@ -316,7 +342,7 @@ artifacts/minimax/experiments/<experiment_id>/
 | Resume refuses: config hash mismatch | You changed a setting that affects results. Start a new experiment. |
 | Assertion about a missing surrogate, or family/side mismatch | Run step 4 for that stratum, or fix the `surrogate` path in the config. |
 | Almost every candidate is `UNCERTAIN` | The surrogate has too little data. Add more PPO data (step 3), or for exploration only, use `--set screening.policy='"point"'`. |
-| Risk cost is mostly slippage | This is expected with the current vehicle parameters. See [minimax_design.md §9](minimax_design.md#9-known-limitations-and-open-research-decisions). Lower it with `--set cost.beta_slippage=…`. |
+| Risk cost is mostly slippage | This is expected with the current vehicle parameters. See [description.md §6.1](description.md). Lower it with `--set cost.beta_slippage=…`. |
 | Tests fail with `ModuleNotFoundError: yaml` | Prefix the test command with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`. |
 
 ---
@@ -327,7 +353,7 @@ This pipeline finds one PARALO-MPC weight vector w that minimizes the worst-case
 
 Do steps 0 and 3–5 of Part A first. You need a fitted and validated surrogate for every stratum you screen.
 
-Every evaluation uses the corrected physics ([physics_audit.md](physics_audit.md)):
+Every evaluation uses the corrected physics ([description.md §15](description.md)):
 
 - `"event_model": "physical_v2"`: rollover means realized |a_y| ≥ SSF·g.
 - Slippage means a tire reaches its friction limit sideways, or the combined braking-plus-cornering demand exceeds the friction circle.
@@ -364,7 +390,7 @@ The constraints are listed in the config under `"constraints"`, or taken from th
 | peak lateral acceleration | 4 m/s² |
 | lane-departure rate, peak jerk, peak acceleration | monitored only |
 
-The reasons are in [constrained_design.md §4](constrained_design.md#4-physical-evaluation-learningphysical_evalpy).
+The reasons are in [description.md §12](description.md).
 
 To use your own constraints, put a `"constraints"` list in the config. The list **replaces** the defaults rather than merging with them. Each entry looks like this:
 
@@ -416,3 +442,175 @@ python -m learning.constrained_pipeline --mode report --experiment c_cutin_side1
 This prints a per-iteration table and writes `plots/convergence.png`, which shows the worst shortfall and the worst value of each constraint over the iterations.
 
 Results go to `artifacts/constrained/experiments/<experiment_id>/`, with the same layout as Part A.
+
+---
+
+# Part C — Single scenarios and inspection
+
+These commands work on one scenario or one policy. Paths below use a feasibility policy; a model from C1 works the same way with its own `--out` path.
+
+## C1 — Train one scenario
+
+This trains one dedicated PPO policy for one hand-specified θ. Any field you leave out keeps the family's default:
+
+```bash
+python -m learning.feasibility_train_one --scenario-family cutin --timesteps 2000000 --n-envs 4 --blocker-side 1 --mode robust --scenario-seed 0 --ppo-seed 0 --s-cutin-m 200 --cutter-gap-m 25 --episodes 100 --out learning/ppo_cutin_theta0
+```
+```bash
+python -m learning.feasibility_train_one --scenario-family sandwich --timesteps 2000000 --n-envs 4 --blocker-side -1 --mode exact --scenario-seed 0 --ppo-seed 0 --s-stop-m 220 --front-gap-m 25 --episodes 100 --out learning/ppo_sandwich_thetaA
+```
+
+It prints the resolved scenario, trains, evaluates on `--episodes` held-out seeds, and saves `<out>.zip` and `<out>.meta.json`. The rollover event defaults to `physical_v2`; `--rollover-event` changes it. The PPO discount defaults to 0.999; `--gamma` changes it here and in `feasibility_pipeline --mode run` and `learning.train`.
+
+- `--mode exact` freezes every perturbation at 0 ("can PPO solve this precise scenario?").
+- `--mode robust` applies seeded perturbations across resets ("can PPO solve a local distribution around it?").
+- `--stochastic` samples actions during evaluation instead of using the deterministic mean.
+- `--out` refuses to overwrite a *different* scenario at that path unless you pass `--force`.
+
+Field ranges are `THETA_BOUNDS_CUTIN` in `learning/feasibility_cutin.py` and `THETA_BOUNDS_SANDWICH` in `learning/feasibility_sandwich.py`. Check the source for current values.
+
+## C2 — Evaluate a saved policy
+
+Every C1 run already evaluates after training. To re-evaluate a policy without retraining:
+
+```bash
+python -m learning.eval_batch --model artifacts/feasibility/policies/cutin/side_pos1/<id>/model --episodes 100
+```
+
+Or evaluate it on a scenario you set by hand. Copy `cfg` from `<out>.meta.json`'s `"theta"` field, and keep `device='cpu'`:
+
+```bash
+python -c "from stable_baselines3 import PPO; from learning.env import EgoTrafficEnv; from learning.feasibility_cutin import CutinConfig, CutinRuntime; from learning.eval_batch import run_episodes, summarize_seed; model = PPO.load('learning/ppo_cutin_theta0', device='cpu'); cfg = CutinConfig(seed=0, blocker_side=1, mode='robust', s_cutin_m=200.0, cutter_gap_m=25.0); env = EgoTrafficEnv(arena=CutinRuntime(cfg), mode='distribution', worker_rank=0, rollover_event='physical_v2'); print(summarize_seed(run_episodes(model, env, episodes=200, deterministic=True), mode='distribution', success_threshold=1.0))"
+```
+
+## C3 — Watch an episode
+
+The model's own canonical realization (always the same one). It reads the meta file, so it needs no other flags:
+
+```bash
+python -m learning.eval --model learning/ppo_cutin_theta0
+```
+
+`--stochastic` samples actions. `--seed` does **not** select an evaluated episode, because this animator always runs in `mode="fixed"`.
+
+To replay one specific evaluated episode, use its index from `rollouts.jsonl`:
+
+```bash
+python -m learning.animate_rollout --model artifacts/feasibility/policies/cutin/side_pos1/<scenario_id>/model --episode-index 37 --save out.mp4
+```
+
+`--save` writes a file, which is the practical choice on the headless training machine. Omit it to open a window.
+
+To list a scenario's failed episodes:
+
+```bash
+python3 -c "import json; sid = 'PUT_A_SCENARIO_ID_HERE'; [print(r['episode'], r['failure_reason']) for r in map(json.loads, open('artifacts/feasibility/datasets/cutin/side_pos1/rollouts.jsonl')) if r['scenario_id'] == sid and r['y'] == 0]"
+```
+
+## C4 — Archive a dataset
+
+Do this before resampling after a bounds change. Replace `<label>` with a name:
+
+```bash
+mkdir -p artifacts/feasibility/_archive
+```
+```bash
+mv artifacts/feasibility/datasets/cutin/side_pos1 artifacts/feasibility/_archive/datasets_side_pos1_<label>
+```
+```bash
+mv artifacts/feasibility/policies/cutin/side_pos1 artifacts/feasibility/_archive/policies_side_pos1_<label>
+```
+```bash
+mv artifacts/feasibility/evaluations/cutin/side_pos1 artifacts/feasibility/_archive/evaluations_side_pos1_<label>
+```
+
+## C5 — Not built yet
+
+Runner C, which would compare one θ's fresh empirical success rate with the surrogate's prediction, does not exist.
+
+---
+
+# Part D — PPO evaluation and reporting
+
+This takes PPO from sampled scenarios to figures, tables and a report (description §23). Nothing here starts on its own. `init` trains nothing, and `train` is the campaign.
+
+## D1 — Write a config
+
+`experiment.json` takes any `ExperimentConfig` field. Only `name` is required:
+
+```json
+{"name": "cutin_pilot", "strata": [["cutin", 1], ["cutin", -1]], "design": "lhs", "n_thetas": 10, "ppo_seeds": [0, 1, 2], "timesteps": 2000000, "n_envs": 4, "test_episodes": 100}
+```
+
+For a true two-dimensional slice, use the grid design. Fields you leave out keep the family default:
+
+```json
+{"name": "cutin_slice", "strata": [["cutin", 1]], "design": "grid", "grid_levels": {"road_mu": [0.4, 0.6, 0.8, 1.0], "cutter_gap_m": [15, 30, 45, 60]}, "grid_fixed": {"front_gap_m": 50}, "ppo_seeds": [0]}
+```
+
+## D2 — Create and train
+
+```bash
+python -m learning.ppo_experiment init --config experiment.json
+```
+```bash
+python -m learning.ppo_experiment train --experiment results/ppo_feasibility/cutin_pilot --concurrency 4
+```
+
+`init` refuses an existing name. `train` skips finished jobs, so rerun it after an interruption. Add `--data-class smoke` to `init` for a test run: its outputs are marked as not experimental.
+
+## D3 — Evaluate
+
+```bash
+python -m learning.evaluate_ppo --experiment results/ppo_feasibility/cutin_pilot
+```
+
+This evaluates every policy in the config's `eval_modes`. To evaluate one saved policy instead, add `--checkpoint path/to/model.zip`; its `model.meta.json` must sit beside it. The experiment directory is created if needed. An existing record is never replaced without `--force`.
+
+## D4 — Figures, report, animations
+
+None of these reruns PPO:
+
+```bash
+python -m learning.plot_ppo_results --experiment results/ppo_feasibility/cutin_pilot
+```
+```bash
+python -m learning.report_ppo_results --experiment results/ppo_feasibility/cutin_pilot --html
+```
+```bash
+python -m learning.animate_ppo_results --experiment results/ppo_feasibility/cutin_pilot
+```
+
+Useful plot options:
+
+- `--width single` for IEEE single-column size.
+- `--rank lower`, or `difficulty`, or `family`, for the Wilson plot.
+- `--pair cutin:road_mu,cutter_gap_m --fix front_gap_m=50` for a specific slice.
+
+To replay one rollout, take its scenario and episode from the evaluation record:
+
+```bash
+python -m learning.animate_ppo_results --experiment results/ppo_feasibility/cutin_pilot --scenario <id> --eval-mode robust --episode 12
+```
+
+Only rollouts with a saved trajectory can be replayed.
+
+## D5 — Where things end up
+
+```text
+results/ppo_feasibility/<name>/
+├── manifest.json          identity, provenance, definitions
+├── configs/               experiment.json, scenarios.jsonl
+├── training/<family>/side_<pos1|neg1>/<scenario_id>/seed_<n>/    model.zip, model.meta.json, metrics.jsonl
+├── evaluations/<same path>/<mode>_<protocol>.json
+├── trajectories/<same path>/<mode>/ep_<i>.npz
+├── figures/               PDF, PNG, index.json
+├── animations/
+└── reports/               report.md, report.html, tables/
+```
+
+`results/` is git-ignored. To see a labelled demonstration without any training:
+
+```bash
+python -m tests.ppo_fixtures results/ppo_feasibility
+```

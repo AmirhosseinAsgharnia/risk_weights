@@ -1,8 +1,8 @@
 """
 The single place for steering/curvature conversions, realized tire-force
 quantities, physical event detectors and PARALO risk inputs
-(docs/physics_audit.md). Nothing here changes the simulator's dynamics:
-every function reads the state CarDynamics already defines.
+(docs/description.md §4, §15). Nothing here changes the simulator's dynamics:
+every function reads the tire forces model.car.model.tire_forces computed.
 
 Commanded vs. realized:
   delta_cmd   the front-wheel angle the controller applied.
@@ -21,19 +21,28 @@ Event detectors (versioned; historical results keep their own version):
                         curve at 20 m/s (false positive; audit §A2).
   rollover_physical_v2  quasi-static rigid-body tipping onset |a_y| >= SSF g,
                         a_y the REALIZED body lateral acceleration
-                        (F_yf + F_yr)/m. SSF = W_c/(2 h_CG) = 0.969 -> 9.50 m/s^2.
+                        (F_xf sin(delta) + F_yf cos(delta) + F_yr)/m.
+                        SSF = W_c/(2 h_CG) = 0.969 -> 9.50 m/s^2.
                         Reduced-order: no suspension roll, no tripping, no
                         dynamic overshoot. Since |a_y| <= mu g in this tire
                         model, it can only fire when mu >= SSF.
-  slip_lateral_saturation  some axle's requested lateral force C alpha reaches
-                        mu F_z (where the simulator clips it): the axle is in
-                        the sliding regime of the linear-saturated tire.
-  slip_friction_circle  vehicle-level combined demand
-                        sqrt((m a_x)^2 + (F_yf,req + F_yr,req)^2) >= mu (F_zf + F_zr).
-                        The simulator has NO longitudinal tire force (a_x is
-                        applied directly), so this is the only place where a
-                        braking-plus-cornering friction limit exists; it is an
-                        indicator only, the dynamics are not limited by it.
+
+Four different things, deliberately not one "slip" event:
+  slip_lateral_saturation  TIRE-FORCE SATURATION: some axle's requested C alpha
+                        exceeds the F_y,max left after its F_x, so the simulator
+                        clips it there.
+  slip_friction_circle  FRICTION-DEMAND EXCEEDANCE: some axle's requested
+                        sqrt(F_x,req^2 + F_y,req^2) >= mu F_z. Demand may exceed
+                        the limit; the dynamics only ever see saturated forces,
+                        so this says what was asked for, not what happened.
+  alpha_f, alpha_r      TIRE SLIP ANGLES, reported as they are.
+  stability_loss        LOSS OF VEHICLE STABILITY: body sideslip |beta| >=
+                        STABILITY_SIDESLIP_DEG while moving. A tire at its limit
+                        is not an unrecoverable skid, so saturation alone never
+                        sets this. The 10 deg threshold is a provisional handling
+                        rule of thumb, not a validated limit.
+Accelerations, in order: the raw request, the actuator-limited a_cmd (rate limits,
+learning.env), the tires' achievable force, and the realized a_x = forces / m.
 """
 
 import math
@@ -45,10 +54,13 @@ from model.car.config import VehicleParameters, G
 from model.car.model import CarDynamics
 from risks.rollover import rollover, TrajectoryStep as RolloverStep
 
-VEHICLE_PHYSICS_VERSION = "vehicle-physics-v1"
+VEHICLE_PHYSICS_VERSION = "vehicle-physics-v2"
+# v1: a_x applied directly, lateral force limited at mu F_z alone, load transfer from the command.
+# v2: friction-circle tire forces on each axle, realized load transfer, no reverse under braking.
 ROLLOVER_EVENT_MODELS = ("legacy_v1", "physical_v2")
 LEGACY_ROLLOVER_PROB_THRESHOLD = 0.5   # == learning.env.ROLLOVER_PROB_THRESHOLD (legacy_v1)
 LOW_SPEED_MPS = 1.0
+STABILITY_SIDESLIP_DEG = 10.0   # provisional, see the module docstring
 PARALO_STEER_INPUTS = ("applied", "kinematic_equivalent")
 
 
@@ -91,15 +103,25 @@ def paralo_steer_input(mode: str, delta_applied, v, r, vp: VehicleParameters):
 # ── realized tire quantities (read off CarDynamics, never re-modelled) ──────
 @dataclass(frozen=True)
 class TireState:
-    F_yf: float          # [N] realized (clipped) lateral forces
+    F_yf: float          # [N] realized (saturated) lateral forces, wheel frame
     F_yr: float
     F_yf_req: float      # [N] requested C alpha (before clipping)
     F_yr_req: float
-    F_zf: float          # [N] normal loads incl. longitudinal transfer
+    F_yf_max: float      # [N] lateral capacity left after F_x, sqrt((mu F_z)^2 - F_x^2)
+    F_yr_max: float
+    F_xf: float          # [N] realized longitudinal forces, wheel frame
+    F_xr: float
+    F_xf_req: float      # [N] allocated request (before clipping)
+    F_xr_req: float
+    F_zf: float          # [N] normal loads incl. transfer from the realized a_x
     F_zr: float
-    a_x: float           # [m/s^2] applied longitudinal acceleration
-    a_y: float           # [m/s^2] realized body lateral acceleration (F_yf + F_yr)/m = dv_y/dt + r v_x
+    a_cmd: float         # [m/s^2] actuator-limited request given to the tires
+    a_x: float           # [m/s^2] realized body acceleration from tire forces, = dv_x/dt - r v_y
+    a_y: float           # [m/s^2] realized body acceleration from tire forces, = dv_y/dt + r v_x
+    alpha_f: float       # [rad] tire slip angles
+    alpha_r: float
     sideslip_rad: float  # atan2(v_y, |v_x|)
+    speed: float         # [m/s]
     mu: float
 
     def to_dict(self) -> dict:
@@ -108,25 +130,37 @@ class TireState:
 
 def tire_state(state_vec, accel: float, delta: float, kappa: float, mu: float, vp: VehicleParameters) -> TireState:
     """state_vec = CarState.as_array(); kappa in the dynamics' sign convention (-lane.kappa)."""
-    d = CarDynamics(np.asarray(state_vec, dtype=float), accel, delta, kappa, mu)
+    d = CarDynamics(np.asarray(state_vec, dtype=float), float(accel), float(delta), kappa, float(mu))
     d.p = vp
+    t = d.tires
     v_x, v_y = float(state_vec[3]), float(state_vec[4])
-    F_yf, F_yr = float(d.F_yf), float(d.F_yr)
-    return TireState(F_yf, F_yr, float(vp.C_f * d.alpha_f), float(vp.C_r * d.alpha_r), float(d.F_zf), float(d.F_zr),
-                     float(accel), (F_yf + F_yr) / vp.m, math.atan2(v_y, max(abs(v_x), 1e-6)), float(mu))
+    return TireState(t.F_yf, t.F_yr, t.F_yf_req, t.F_yr_req, t.F_yf_max, t.F_yr_max, t.F_xf, t.F_xr, t.F_xf_req,
+                     t.F_xr_req, t.F_zf, t.F_zr, float(accel), t.a_x, t.a_y, t.alpha_f, t.alpha_r,
+                     math.atan2(v_y, max(abs(v_x), 1e-6)), math.hypot(v_x, v_y), float(mu))
 
 
 def slip_lateral_saturation(ts: TireState) -> bool:
-    return abs(ts.F_yf_req) >= ts.mu * ts.F_zf or abs(ts.F_yr_req) >= ts.mu * ts.F_zr
+    return abs(ts.F_yf_req) > ts.F_yf_max or abs(ts.F_yr_req) > ts.F_yr_max
 
 
 def friction_demand(ts: TireState, vp: VehicleParameters) -> float:
-    """Requested combined force / available (vehicle level); >= 1 means the friction circle is exceeded."""
-    return math.hypot(vp.m * ts.a_x, ts.F_yf_req + ts.F_yr_req) / max(ts.mu * (ts.F_zf + ts.F_zr), 1e-9)
+    """Largest axle requested combined force / available; >= 1 means the friction circle is exceeded there."""
+    return max(math.hypot(ts.F_xf_req, ts.F_yf_req) / max(ts.mu * ts.F_zf, 1e-9),
+               math.hypot(ts.F_xr_req, ts.F_yr_req) / max(ts.mu * ts.F_zr, 1e-9))
+
+
+def tire_utilization(ts: TireState) -> float:
+    """Largest axle REALIZED combined force / available; <= 1 by construction (the check that it is)."""
+    return max(math.hypot(ts.F_xf, ts.F_yf) / max(ts.mu * ts.F_zf, 1e-9),
+               math.hypot(ts.F_xr, ts.F_yr) / max(ts.mu * ts.F_zr, 1e-9))
 
 
 def slip_friction_circle(ts: TireState, vp: VehicleParameters) -> bool:
     return friction_demand(ts, vp) >= 1.0
+
+
+def stability_loss(ts: TireState) -> bool:
+    return ts.speed >= LOW_SPEED_MPS and abs(math.degrees(ts.sideslip_rad)) >= STABILITY_SIDESLIP_DEG
 
 
 # ── rollover ────────────────────────────────────────────────────────────────
@@ -180,7 +214,8 @@ class FrictionInfoConfig:
         return float(np.clip(mu, self.mu_min, self.mu_max))
 
 
-__all__ = ["VEHICLE_PHYSICS_VERSION", "ROLLOVER_EVENT_MODELS", "LOW_SPEED_MPS", "PARALO_STEER_INPUTS",
+__all__ = ["VEHICLE_PHYSICS_VERSION", "ROLLOVER_EVENT_MODELS", "LOW_SPEED_MPS", "STABILITY_SIDESLIP_DEG",
+           "PARALO_STEER_INPUTS", "tire_utilization", "stability_loss",
            "understeer_gradient", "steady_state_yaw_rate", "realized_curvature", "delta_equivalent",
            "paralo_steer_input", "TireState", "tire_state", "slip_lateral_saturation", "friction_demand",
            "slip_friction_circle", "rollover_accel_threshold", "p_roll_legacy", "rollover_legacy_v1",

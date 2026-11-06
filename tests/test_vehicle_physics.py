@@ -1,4 +1,4 @@
-"""Rollover / slippage physics regression (docs/physics_audit.md §A2, spec §6, §27).
+"""Rollover / slippage physics regression (docs/description.md §A2, spec §6, §27).
 Steady states come from the real CarDynamics (RK4), never from a re-model."""
 
 import math
@@ -25,11 +25,15 @@ AY_ROLL = rollover_accel_threshold(VP)
 
 
 def steady(v, delta, mu=1.0, accel=0.0, T=8.0, dt=0.01):
+    """Constant delta at held speed: cornering costs speed through the steered tire, so a steady state
+    needs drive force (the request is passed on to tire_state, as the accel applied in the last step)."""
     car = Car(state=CarState(v_x=v), vehicle_params=VP)
+    a = 0.0
     for _ in range(int(T / dt)):
-        car.step(0.0, delta, 0.0, mu, dt)
+        a = 2.0 * (v - car.state.v_x)
+        car.step(a, delta, 0.0, mu, dt)
     st = car.state
-    return st, tire_state(st.as_array(), accel, delta, 0.0, mu, VP)
+    return st, tire_state(st.as_array(), a + accel, delta, 0.0, mu, VP)
 
 
 def test_reference_threshold_is_the_quasi_static_ssf():
@@ -45,7 +49,7 @@ def test_straight_line_has_no_risk():
 def test_gentle_curve_at_highway_speed_is_a_legacy_false_positive_only():
     # the default curve (kappa 0.005) at 20 m/s: the SUV needs delta ~ L kappa + K a_y ~ 0.082
     st, ts = steady(20.0, 0.0816)
-    assert ts.a_y == pytest.approx(1.96, abs=0.05) and st.r / st.v_x == pytest.approx(0.005, rel=0.06)   # v_x bleeds ~3% (no drive force)
+    assert ts.a_y == pytest.approx(1.96, abs=0.05) and st.r / st.v_x == pytest.approx(0.005, rel=0.06)
     assert rollover_legacy_v1(st.v_x, 0.0816, VP)                       # the documented false positive
     assert not rollover_physical_v2(ts, VP) and abs(ts.a_y) < 0.25 * AY_ROLL
     d_eq = paralo_steer_input("kinematic_equivalent", 0.0816, st.v_x, st.r, VP)
@@ -72,7 +76,7 @@ def test_high_lateral_accel_can_reach_tipping_only_when_mu_exceeds_ssf():
                 car.step(0.0, delta, 0.0, mu, 0.01)
                 ays.append(abs(tire_state(car.state.as_array(), 0.0, delta, 0.0, mu, VP).a_y))
         assert max(ays) <= mu * G + 1e-6 and max(ays) < AY_ROLL
-    ts = tire_state(np.array([0.0, 0.0, 0.0, 25.0, -6.0, 0.6]), 0.0, 0.6, 0.0, 1.0, VP)   # both axles saturated, mu = 1
+    ts = tire_state(np.array([0.0, 0.0, 0.0, 25.0, -20.0, 0.6]), 0.0, 0.0, 0.0, 1.0, VP)   # both axles saturated, mu = 1
     assert abs(ts.a_y) == pytest.approx(G, rel=1e-6) and rollover_physical_v2(ts, VP)
 
 
@@ -102,6 +106,7 @@ def test_combined_braking_and_cornering_uses_the_friction_circle():
     assert not slip_friction_circle(ts, VP)
     ts_b = tire_state(st.as_array(), -6.0, 0.1, 0.0, 0.6, VP)
     assert friction_demand(ts_b, VP) > friction_demand(ts, VP) and slip_friction_circle(ts_b, VP)
+    assert tire_state(st.as_array(), -6.0, 0.1, 0.0, 0.6, VP).a_x > -0.6 * G   # the demand is not realized
 
 
 def test_low_speed_and_zero_curvature_are_numerically_stable():

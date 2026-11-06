@@ -1,6 +1,6 @@
 """
 Constrained minimax tuning of ONE shared PARALO-MPC weight vector w
-(docs/constrained_design.md):
+(docs/description.md §13):
 
     w* = argmin_w  max_{theta in Theta_f} J_progress(w, theta)
          s.t.      max_{theta in Theta_f} R_i(w, theta) <= eps_i   for every enforced constraint i

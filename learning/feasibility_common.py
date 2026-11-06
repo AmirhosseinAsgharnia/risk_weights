@@ -1,7 +1,7 @@
 """
 Shared plumbing for the feasibility-surrogate scenario families (cutin,
 sandwich) -- see learning.feasibility_cutin / learning.feasibility_sandwich
-for the families themselves, and docs/feasibility_pipeline.md for the
+for the families themselves, and docs/how_to_run.md for the
 overall pipeline this supports.
 
 Kept deliberately small and dependency-light, mirroring learning.scenario's

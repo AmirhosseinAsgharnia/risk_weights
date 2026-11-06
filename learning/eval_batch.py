@@ -67,14 +67,18 @@ def _load_meta(model_path: str) -> dict | None:
 
 
 def run_episodes(model: PPO, env: EgoTrafficEnv, episodes: int,
-                  deterministic: bool = True, fail_dir: str | None = None) -> list[dict]:
+                  deterministic: bool = True, fail_dir: str | None = None, observer=None) -> list[dict]:
     """Run `episodes` full rollouts of `model` against `env`, one row per
     episode built directly from EgoTrafficEnv's own terminal `info` (see
     module docstring -- outcome/success/failure_reason are never
-    re-derived here)."""
+    re-derived here). observer: optional start(env) / step(env, action,
+    info) / end(env, result) hooks (learning.trajectory_log), which may add
+    to a result row; training metrics never use one."""
     results = []
     for ep in range(episodes):
         obs, info = env.reset()
+        if observer is not None:
+            observer.start(env)
         terminated = truncated = False
         step_idx = 0
         ep_return = 0.0
@@ -83,6 +87,8 @@ def run_episodes(model: PPO, env: EgoTrafficEnv, episodes: int,
             obs, reward, terminated, truncated, info = env.step(action)
             ep_return += reward
             step_idx += 1
+            if observer is not None:
+                observer.step(env, action, info)
 
         results.append({
             "episode": ep,
@@ -93,12 +99,15 @@ def run_episodes(model: PPO, env: EgoTrafficEnv, episodes: int,
             "steps": step_idx,
             "return": ep_return,
             "progress_m": info["progress_m"],
+            "episode_progress": info["episode_progress"],
             "distance_travelled_m": info["distance_travelled_m"],
             "elapsed_s": info["elapsed_s"],
             "min_clearance_m": info["min_clearance_m"],
             "max_p_rollover": info["max_p_rollover"],
             "max_road_departure_m": info["max_road_departure_m"],
         })
+        if observer is not None:
+            observer.end(env, results[-1])
 
         if not info["success"] and fail_dir is not None:
             os.makedirs(fail_dir, exist_ok=True)

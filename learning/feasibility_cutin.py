@@ -1,6 +1,6 @@
 """
 Cut-in scenario family for the feasibility-surrogate pipeline (see
-learning.feasibility_common for shared plumbing, docs/feasibility_pipeline.md
+learning.feasibility_common for shared plumbing, docs/how_to_run.md
 for the pipeline overview).
 
 Six agents, fixed semantic order [front_1, front_2, rear_1, rear_2,

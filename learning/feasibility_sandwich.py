@@ -1,6 +1,6 @@
 """
 Sandwich scenario family for the feasibility-surrogate pipeline (see
-learning.feasibility_common for shared plumbing, docs/feasibility_pipeline.md
+learning.feasibility_common for shared plumbing, docs/how_to_run.md
 for the pipeline overview).
 
 Six agents, fixed semantic order [front_1, front_2, rear_1, rear_2,
@@ -32,9 +32,10 @@ from learning.feasibility_common import (
 # model.traffic_step doesn't export a module-level MAX_BRAKING constant of its own -- step_surr_agents'
 # own default (8.0) is the same clamp value learning.env.MAX_BRAKING already mirrors for ego; reusing
 # that existing constant here instead of a fresh, independently-invented one.
-from learning.env import MAX_BRAKING as SURR_MAX_BRAKING, DT as _DT
+from learning.env import MAX_BRAKING as SURR_MAX_BRAKING
 
 FAMILY = "sandwich"
+_STOPPED_SPEED_MPS = 1e-2   # [m/s] the stopper counts as stopped at or below this realized speed
 SLOT_NAMES = ("front_1", "front_2", "rear_1", "rear_2", "blocker_1", "blocker_2")
 
 # -- Fixed secondary-actor formation, same convention/constants as feasibility_cutin.py.
@@ -259,22 +260,15 @@ class SandwichRuntime:
         if not self.triggered or stopper.crashed:
             return None   # not yet triggered, or already resolved by a plastic collision -- leave IDM alone
 
-        if self.stopped:
-            # Held at exactly 0 forever after -- see below for why this never drifts negative.
-            return {self.STOPPER_CAR_ID: 0.0}
-
-        v_x = stopper.car.state.v_x
-        # Clamp the commanded decel so this step brings v_x to exactly 0, never past it: a plain
-        # constant emergency_deceleration_mps2 would overshoot into reverse on whichever single step
-        # crosses zero (v_x's own ODE here is dv_x/dt = accel exactly -- no steering/yaw coupling
-        # for a straight-driving car with delta=0 throughout -- so RK4 integrates a constant accel
-        # exactly, meaning this clamp lands on precisely 0.0, not just approximately).
-        accel = max(self.cfg.emergency_deceleration_mps2, -v_x / _DT)
-        if v_x + accel * _DT <= 1e-9:
+        # The brake stays on from the trigger for good: the request can exceed what the road gives
+        # (the realized decel is the tires' mu g limit), and a brake force fades out at rest and never
+        # reverses the car (model.car.model.tire_forces), so holding it is what keeps the car parked.
+        # `stopped` is therefore judged from the realized speed.
+        if not self.stopped and stopper.car.state.v_x <= _STOPPED_SPEED_MPS:
             self.stopped = True
             self.stopping_time_s = t
             self.stopping_distance_m = stopper.car.state.s - self._s_at_trigger
-        return {self.STOPPER_CAR_ID: accel}
+        return {self.STOPPER_CAR_ID: self.cfg.emergency_deceleration_mps2}
 
     def extra_info(self) -> dict:
         return {

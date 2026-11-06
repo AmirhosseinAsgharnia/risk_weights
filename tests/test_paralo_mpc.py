@@ -43,7 +43,7 @@ def test_prediction_yaw_model_matches_the_simulator_steady_state():
         car = Car()
         car.state = dataclasses.replace(car.state, v_x=v, delta=d)
         for _ in range(200):
-            car.step(0.0, d, 0.0, 1.0, DT)
+            car.step(2.0 * (v - car.state.v_x), d, 0.0, 1.0, DT)   # held speed: cornering costs speed
         assert car.state.r == pytest.approx(v * np.tan(d) / (vp.L + K * v * v), rel=0.02)
 
 
