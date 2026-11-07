@@ -124,9 +124,9 @@ def build_fixture(root: Path, name: str = "demo_fixture") -> Path:
     for seed, shift in ((0, 0.0), (1, 1.0)):
         _metrics(exp, "cutin", 1, "metrics0", seed, shift)
         _metrics(exp, "sandwich", 1, "metrics1", seed, shift * 0.5)
-    _real_rollout_record(exp, "cutin", CutinConfig(blocker_side=1, mode="robust", road_mu=0.9), ScriptedPolicy(0.0, 3.0, 225.0), "r0ccccccccccc")
+    _real_rollout_record(exp, "cutin", CutinConfig(blocker_side=1, mode="robust", road_mu=0.9), ScriptedPolicy(), "r0ccccccccccc")
     _real_rollout_record(exp, "cutin", CutinConfig(blocker_side=1, mode="robust", road_mu=0.4, cutter_gap_m=10.0, s_cutin_m=120.0), ScriptedPolicy(), "r1ddddddddddd")
-    _real_rollout_record(exp, "sandwich", SandwichConfig(blocker_side=1, mode="robust", road_mu=0.9), ScriptedPolicy(0.0, 3.0, 235.0), "r2eeeeeeeeeee")
+    _real_rollout_record(exp, "sandwich", SandwichConfig(blocker_side=1, mode="robust", road_mu=0.9, escape_gap_length_m=40.0, escape_gap_center_m=0.0, front_gap_m=20.0), ScriptedPolicy(0.0, 1.5, 120.0), "r2eeeeeeeeeee")
     _real_rollout_record(exp, "sandwich", SandwichConfig(blocker_side=-1, mode="robust", road_mu=0.5), ScriptedPolicy(), "r3fffffffffff")
     return exp
 

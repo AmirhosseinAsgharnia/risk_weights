@@ -1,1 +1,1 @@
-{"name": "ppo_obvious_v1", "strata": [["cutin", 1]], "design": "lhs", "n_thetas": 1, "sampling_seed": 0, "training_mode": "robust", "ppo_seeds": [0, 1, 2], "timesteps": 4000000, "n_envs": 4, "no_early_stop": true, "test_episodes": 100, "max_ego_speed_mps": 27.0}
+{"name": "ppo_obvious_v2", "strata": [["cutin", 1]], "design": "lhs", "n_thetas": 1, "sampling_seed": 0, "training_mode": "robust", "ppo_seeds": [0, 1, 2], "timesteps": 4000000, "n_envs": 4, "no_early_stop": true, "test_episodes": 100, "max_ego_speed_mps": 30.0}

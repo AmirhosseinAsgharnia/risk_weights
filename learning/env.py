@@ -25,8 +25,9 @@ solved. The physical, reward-independent terminal conditions are:
                       collision just ends the episode), ROLLOVER
                       (risks.rollover.rollover's P_roll for ego's current
                       (v, delta) exceeds ROLLOVER_PROB_THRESHOLD), or
-                      OFF_ROAD (ego's whole body, turned by its heading
-                      error, is past the paved road's edge).
+                      OFF_ROAD (any part of ego's body, turned by its
+                      heading error, is more than ROAD_EDGE_MARGIN_M past
+                      the paved road's edge).
   - TIMEOUT:         the episode's time budget was reached without either
                       of the above -- Gymnasium `truncated`, not
                       `terminated` (a time-limit cutoff on an otherwise-
@@ -102,6 +103,7 @@ EGO_CAR_ID = -1   # sentinel car_id, distinct from every surr slot id (0..N_SURR
 # ── Action space: accel in [ACCEL_MIN, ACCEL_MAX], delta in +/-DELTA_MAX ───
 # accel is a tire-force REQUEST (F = m accel), not an applied acceleration: the realized one is limited by
 # the road's friction (model.car.model.tire_forces) and is what info["accel_realized"] reports.
+ROAD_EDGE_MARGIN_M = 0.5   # [m] how far the body may pass the paved edge before OFF_ROAD
 ACCEL_MIN = -8.0   # [m/s^2] matches MAX_BRAKING -- ego can brake as hard as surr cars are clamped to
 ACCEL_MAX = 4.0    # [m/s^2] typical passenger-car acceleration ceiling
 DELTA_MAX = VehicleParameters.delta_max   # [rad] front-wheel steering lock
@@ -384,8 +386,8 @@ class EgoTrafficEnv(gym.Env):
 
         # Total paved half-width, symmetric about the backbone (lane offsets
         # are laid out symmetrically -- see Road.lane_calc) -- used by
-        # _ego_off_road to terminate once ego's body is entirely off the
-        # road, not just out of its current lane. Derived from self.road
+        # _ego_off_road to terminate once ego's body passes the road edge by
+        # more than ROAD_EDGE_MARGIN_M, not just its current lane. Derived from self.road
         # rather than hard-coded so it can never drift out of sync with it.
         self._road_half_width = self.road.lanes[-1].offset + self.road.lanes[-1].width / 2   # type: ignore
 
@@ -638,16 +640,17 @@ class EgoTrafficEnv(gym.Env):
         d["stability_loss"] = d["stability_loss"] or stability_loss(ts)
 
     def _ego_off_road(self) -> bool:
-        """True once ego's whole body is past the paved road's edge -- not
-        just out of its current lane -- in the shared backbone_e_y frame
-        (see _ego_backbone_e_y/_ego_nearest_lane): the footprint's inner
-        side, turned by e_psi, against self._road_half_width (the true
-        outer edge, computed once per reset() from self.road). Wrapped in
+        """True once any part of ego's body is more than ROAD_EDGE_MARGIN_M
+        past the paved road's edge -- not just out of its current lane -- in
+        the shared backbone_e_y frame (see _ego_backbone_e_y/_ego_nearest_lane):
+        the footprint's outer side, turned by e_psi, against
+        self._road_half_width (the true outer edge, computed once per reset()
+        from self.road). Wrapped in
         bool(): both operands are numpy floats, so the raw comparison is
         numpy.bool_ -- Gymnasium's own env checker requires `terminated`
         to be a genuine Python bool."""
-        inner_edge = abs(self._ego_backbone_e_y()) - body_half_extent_e_y(self.ego_car.state.e_psi)
-        return bool(inner_edge > self._road_half_width)
+        outer_edge = abs(self._ego_backbone_e_y()) + body_half_extent_e_y(self.ego_car.state.e_psi)
+        return bool(outer_edge > self._road_half_width + ROAD_EDGE_MARGIN_M)
 
     def _ego_clearance(self) -> float:
         """Distance from ego's body to the nearest surr body, using the same

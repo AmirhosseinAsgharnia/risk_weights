@@ -298,6 +298,11 @@ def _capped_peak(limit):
     return run_episodes(policy, env, 1, observer=TrajectoryRecorder())[0]["physical"]["peak_speed_mps"]
 
 
+def test_default_speed_limit_is_30():
+    assert CutinConfig().max_ego_speed_mps == SandwichConfig().max_ego_speed_mps == 30.0
+    assert ExperimentConfig(name="x").max_ego_speed_mps == 30.0
+
+
 def test_speed_limit_stops_acceleration_at_the_limit():
     assert _capped_peak(None) > 25.0
     assert 20.9 < _capped_peak(21.0) <= 21.05
@@ -491,8 +496,8 @@ def test_first_row_has_no_applied_control():
 
 # ── progress, completion, Frenet to world ───────────────────────────────────
 def test_progress_and_completion_time_from_a_real_success():
-    traj_policy = ScriptedPolicy(0.0, 3.0, 225.0)
-    cfg = SandwichConfig(blocker_side=1, mode="robust", road_mu=0.9)
+    traj_policy = ScriptedPolicy(0.0, 1.5, 120.0)
+    cfg = SandwichConfig(blocker_side=1, mode="robust", road_mu=0.9, escape_gap_length_m=40.0, escape_gap_center_m=0.0, front_gap_m=20.0)
     env = EgoTrafficEnv(arena=FAMILIES["sandwich"][1](cfg), mode="distribution", worker_rank=TEST_RANK, rollover_event="physical_v2")
     traj_policy.env = env
     r = run_episodes(traj_policy, env, 1)[0]

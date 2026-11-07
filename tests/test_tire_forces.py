@@ -12,6 +12,7 @@ import pytest
 
 from initialization.traffic_init import CAR_LENGTH, CAR_WIDTH
 from learning.closed_loop import ScenarioSpec, Stratum, build_controller, FAMILIES
+from learning.env import ROAD_EDGE_MARGIN_M
 from learning.env import ACCEL_MAX, ACCEL_MIN, EgoTrafficEnv
 from learning.mpc import MPCWeights
 from learning.physical_eval import run_physical_episode
@@ -374,20 +375,33 @@ def test_body_gap_is_zero_exactly_on_overlap_and_the_box_distance_when_straight(
         assert (gap == 0.0) == ego_overlaps_any(0.0, 0.0, [_agent(ds, dey, pb)], ROAD, ego_e_psi=pa)
 
 
-def test_off_road_needs_the_whole_turned_body_past_the_edge():
+def test_off_road_allows_half_a_metre_past_the_edge_for_the_turned_body():
     cfg = SPEC.config(seed=1000)
     env = EgoTrafficEnv(arena=FAMILIES["cutin"][1](cfg), mode="fixed")
     env.reset()
-    edge = env._road_half_width
+    limit = env._road_half_width + ROAD_EDGE_MARGIN_M
     lane_offset = env.road.lanes[env.ego_car.state.lane].offset
     def off(e_y_backbone, e_psi):
         env.ego_car.state = dataclasses.replace(env.ego_car.state, e_y=e_y_backbone + lane_offset, e_psi=e_psi)
         return env._ego_off_road()
-    assert not off(edge + CAR_WIDTH / 2 - 0.01, 0.0) and off(edge + CAR_WIDTH / 2 + 0.01, 0.0)
+    assert ROAD_EDGE_MARGIN_M == 0.5
+    assert not off(limit - CAR_WIDTH / 2 - 0.01, 0.0) and off(limit - CAR_WIDTH / 2 + 0.01, 0.0)
     extent = body_half_extent_e_y(0.5)
     assert extent > CAR_WIDTH / 2
-    assert not off(edge + extent - 0.01, 0.5) and off(edge + extent + 0.01, 0.5)
-    assert not off(-(edge + CAR_WIDTH / 2 - 0.01), 0.0) and off(-(edge + CAR_WIDTH / 2 + 0.01), 0.0)
+    assert not off(limit - extent - 0.01, 0.5) and off(limit - extent + 0.01, 0.5)   # turning uses up the margin
+    assert not off(-(limit - CAR_WIDTH / 2 - 0.01), 0.0) and off(-(limit - CAR_WIDTH / 2 + 0.01), 0.0)
+    assert not off(env.road.lanes[-1].offset, 0.0) and not off(env.road.lanes[0].offset, 0.0)   # the outer lanes stay legal
+
+
+def test_off_road_margin_matches_the_logged_edge_clearance():
+    cfg = SPEC.config(seed=1000)
+    env = EgoTrafficEnv(arena=FAMILIES["cutin"][1](cfg), mode="fixed")
+    env.reset()
+    lane_offset = env.road.lanes[env.ego_car.state.lane].offset
+    e_y = env._road_half_width + ROAD_EDGE_MARGIN_M - CAR_WIDTH / 2 + 0.01
+    env.ego_car.state = dataclasses.replace(env.ego_car.state, e_y=e_y + lane_offset, e_psi=0.0)
+    clearance = env._road_half_width - abs(env._ego_backbone_e_y()) - body_half_extent_e_y(0.0)
+    assert clearance < -ROAD_EDGE_MARGIN_M and env._ego_off_road()
 
 
 # ── Environment smoke test: an interface check, no evidence about PPO or feasibility ──────

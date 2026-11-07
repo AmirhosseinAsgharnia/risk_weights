@@ -69,7 +69,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnNoModelImprovement
 
-from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, EgoTrafficEnv, REWARD_VERSION
+from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, EgoTrafficEnv, REWARD_VERSION, ROAD_EDGE_MARGIN_M
 from learning.feasibility_cutin import CutinConfig, CutinRuntime
 from learning.feasibility_sandwich import SandwichConfig, SandwichRuntime
 from learning.eval_batch import run_episodes, summarize_seed
@@ -260,7 +260,7 @@ def train_and_evaluate(scenario_family: str, cfg, params: RunParams, *, verbose:
         model.save(params.out)
         evaluated_checkpoint = "final"
 
-    meta = {**resolved, "max_ego_speed_mps": cfg.max_ego_speed_mps, "rollover_event_model": params.rollover_event, "reward_version": REWARD_VERSION,
+    meta = {**resolved, "max_ego_speed_mps": cfg.max_ego_speed_mps, "off_road_margin_m": ROAD_EDGE_MARGIN_M, "rollover_event_model": params.rollover_event, "reward_version": REWARD_VERSION,
             "reward_config": dataclasses.asdict(DEFAULT_REWARD_CONFIG), "ppo_gamma": params.gamma,
             "vehicle_physics_version": VEHICLE_PHYSICS_VERSION, "obs_dim": int(model.observation_space.shape[0]),
             "action_dim": int(model.action_space.shape[0]), "dt_s": DT,

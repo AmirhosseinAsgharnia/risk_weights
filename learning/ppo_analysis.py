@@ -187,6 +187,7 @@ def comparison_issues(records: list[dict]) -> list[str]:
         if any(p.get(key) is None for p in policies):
             issues.append(f"{label}: not recorded for every policy")
     differ(lambda r: r["provenance"].get("vehicle_physics_version"), "evaluation vehicle dynamics")
+    differ(lambda r: r["policy"].get("off_road_margin_m"), "off-road margin")
     differ(lambda r: (r["protocol"]["test_episodes"], r["protocol"]["deterministic"], r["protocol"]["rollover_event"]), "evaluation protocols")
     if any(not p.get("reward_version") for p in policies):
         issues.append("reward configuration not recorded for every policy")

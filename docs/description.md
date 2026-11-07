@@ -399,6 +399,7 @@ success = scenario_goal_reached and not (collision or rollover or off_road)
 ```
 
 - Failure priority: COLLISION > ROLLOVER > OFF_ROAD.
+- **OFF_ROAD** fires once any part of the body, turned by its heading, is more than `ROAD_EDGE_MARGIN_M` (0.5 m) past the paved edge. It is the same rule for PPO and the MPC, because both use this environment. Policy metadata records the margin as `off_road_margin_m`, and results with different margins are flagged as non-equivalent.
 - **The ROLLOVER event is selectable** with `rollover_event`:
   - `physical_v2`: realized |a_y| ≥ SSF·g ≈ 9.5 m/s². This is what new PPO data and the constrained pipeline use.
   - `legacy_v1`: P_roll(v_x, δ_cmd) > 0.5. It fires at about 2 m/s² on the default curve (§15). It is the env's constructor default, so historical runs reproduce, and the baseline J_eval pipeline (`closed_loop`) still runs on it.
@@ -1314,7 +1315,7 @@ With the original baseline, slippage also dominated E_risk: 0.28 of the 0.36 ris
 
 | File | Tests | Covers |
 |---|---|---|
-| `test_tire_forces.py` | 112 | Combined tire model: braking, cornering, drive, low speed, load transfer, RK4-stage friction circle, wrong-way spin sweep, event definitions, oriented footprints, env and MPC smoke tests |
+| `test_tire_forces.py` | 113 | Combined tire model: braking, cornering, drive, low speed, load transfer, RK4-stage friction circle, wrong-way spin sweep, event definitions, oriented footprints, env and MPC smoke tests |
 | `test_ppo_reporting.py` | 94 | Records, seed streams, exact vs. robust, Wilson and admission, seed selection, tire utilization, Frenet to world, footprints, maps, comparisons, training metrics, figures, animation, reports |
 | `test_reward.py` | 45 | Reward decomposition, running-maximum progress, oscillation, goal cap, terminal values and priority, timeout, outcome independence, Gymnasium and PPO compatibility, γ and version stamping |
 | `test_feasibility_arena.py` | 29 | Both families: placement, triggers, prescribed events, env integration |
@@ -1554,7 +1555,7 @@ For one policy and one evaluation mode, the evaluator runs the selection stream,
 
 **Sideslip is reported separately from success.** A rollout with body sideslip of 10° or more still counts as a success, because feasibility and stability are distinct and 10° is provisional. Tables A and B report these rollouts separately, and Table B's `friction_status` covers friction limits only. When seeds tie on the selection stream, the one with fewer stability losses there is chosen.
 
-**Speed limit.** `max_ego_speed_mps` in `ExperimentConfig` cuts off acceleration at that speed, and braking and coasting stay free. It is stored in the policy metadata, so training and evaluation share it. It is off by default.
+**Speed limit.** `max_ego_speed_mps` in `ExperimentConfig` cuts off acceleration at that speed, and braking and coasting stay free. It is stored in the policy metadata, so training and evaluation share it. The default is 30 m/s, on `ArenaCommonConfig` as well, so it also applies to the MPC's arena runs. Policies trained before the limit existed keep no limit when re-evaluated.
 
 **Traffic crashes are logged, not interpreted.** Each rollout records `traffic_crashes` and `first_traffic_crash_s`, and Table A reports both the crash rate and the rate of timeouts after a crash. A crash does not show the road was blocked, and those timeouts still count as failures. Older records show these as unknown, not zero.
 

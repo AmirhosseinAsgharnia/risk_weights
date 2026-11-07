@@ -70,7 +70,7 @@ def policy_identity(checkpoint, meta: dict) -> dict:
             "reward_version": meta.get("reward_version"), "reward_config": meta.get("reward_config"),
             "ppo_gamma": meta.get("ppo_gamma"), "ppo_hyperparameters": meta.get("ppo_hyperparameters"),
             "vehicle_physics_version": meta.get("vehicle_physics_version"),
-            "rollover_event_model": meta.get("rollover_event_model"), "obs_dim": meta.get("obs_dim"),
+            "rollover_event_model": meta.get("rollover_event_model"), "off_road_margin_m": meta.get("off_road_margin_m"), "obs_dim": meta.get("obs_dim"),
             "action_dim": meta.get("action_dim"), "dt_s": meta.get("dt_s")}
 
 

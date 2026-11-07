@@ -86,7 +86,7 @@ def build_report(exp: Path, html_export: bool = False) -> Path:
             f"- Scenario design: `{cfg['design']}`, sampling seed {cfg['sampling_seed']}; {len(scenarios)} scenarios sampled",
             f"- PPO seeds: {cfg['ppo_seeds']}; discount {cfg['gamma']}; budget {cfg['timesteps']} steps",
             f"- Reward (current code at creation): `{manifest['reward_version']}`",
-            f"- Ego speed limit: {cfg.get('max_ego_speed_mps') or 'none'} m/s",
+            f"- Ego speed limit: {cfg.get('max_ego_speed_mps') or 'none'} m/s; road-edge margin: {manifest.get('off_road_margin_m', 'not recorded')} m",
             f"- Software: {', '.join(f'{k} {v}' for k, v in prov['software'].items())}",
             f"- Seed streams (worker ranks): {manifest['seed_streams']}", "",
             "Terms used in this report:", ""]

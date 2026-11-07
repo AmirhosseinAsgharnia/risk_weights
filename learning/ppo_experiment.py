@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from importlib import metadata as importlib_metadata
 from pathlib import Path
 
-from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, REWARD_VERSION
+from learning.env import DEFAULT_PPO_GAMMA, DEFAULT_REWARD_CONFIG, DT, REWARD_VERSION, ROAD_EDGE_MARGIN_M
 from learning.feasibility_cutin import CutinConfig, CutinRuntime, THETA_BOUNDS_CUTIN, validate_cutin
 from learning.feasibility_dataset import _atomic_write_bytes, _side_dir_name, read_jsonl
 from learning.feasibility_sampling import sample_cutin, sample_sandwich
@@ -63,7 +63,8 @@ FAMILIES = {"cutin": (CutinConfig, CutinRuntime, THETA_BOUNDS_CUTIN, validate_cu
 _LANE_NUM, _EGO_LANE = 3, 1   # the standard road, as learning.feasibility_sampling
 
 DEFINITIONS = {
-    "observed_success": "rollout reached the scenario goal with no collision, rollover or road departure "
+    "observed_success": f"rollout reached the scenario goal with no collision, rollover or road departure (any part of the body "
+                        f"more than {ROAD_EDGE_MARGIN_M} m past the paved edge) "
                         "(EgoTrafficEnv info['success']); a timeout is never a success",
     "estimated_success_probability": "p_hat = k/N over independent held-out rollouts of one selected policy",
     "statistical_admission": f"admitted: two-sided 95% Wilson lower bound >= p0 = {ADMISSION_P0}; "
@@ -141,7 +142,7 @@ class ExperimentConfig:
     test_episodes: int = 100
     deterministic: bool = True
     trajectories_per_outcome: int = 3
-    max_ego_speed_mps: float | None = None
+    max_ego_speed_mps: float | None = 30.0
 
     def __post_init__(self):
         assert self.design in ("lhs", "sobol", "grid"), self.design
@@ -195,7 +196,7 @@ def create_experiment(config: ExperimentConfig, root: Path = EXPERIMENTS_ROOT, d
         "config": dataclasses.asdict(config), "definitions": DEFINITIONS, "admission_p0": ADMISSION_P0,
         "seed_streams": {"training": TRAINING_RANK, "early_stopping": EARLY_STOP_RANK, "validation": VALIDATION_RANK,
                          "selection": SELECTION_RANK, "test": TEST_RANK},
-        "training_realization": training_realization(config.training_mode), "reward_version": REWARD_VERSION,
+        "training_realization": training_realization(config.training_mode), "reward_version": REWARD_VERSION, "off_road_margin_m": ROAD_EDGE_MARGIN_M,
         "reward_config": dataclasses.asdict(DEFAULT_REWARD_CONFIG)})
     return exp
 

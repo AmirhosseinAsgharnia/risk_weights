@@ -1,0 +1,1 @@
+{"name": "ppo_pilot_v2", "strata": [["cutin", 1], ["cutin", -1], ["sandwich", 1], ["sandwich", -1]], "design": "lhs", "n_thetas": 2, "sampling_seed": 0, "training_mode": "robust", "ppo_seeds": [0, 1, 2], "timesteps": 4000000, "n_envs": 4, "no_early_stop": true, "test_episodes": 100, "max_ego_speed_mps": 30.0}
